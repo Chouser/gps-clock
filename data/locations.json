@@ -1,0 +1,17 @@
+{
+  "testuser": {
+    "_type": "location",
+    "_id": "caaf7be3",
+    "acc": 6,
+    "alt": 214,
+    "cog": 204,
+    "created_at": 1734151709,
+    "lat": 41.0224266,
+    "lon": -85.2990725,
+    "tid": "cj",
+    "topic": "owntracks/testuser/bluejay",
+    "tst": 1734151709,
+    "vac": 0,
+    "vel": 14
+  }
+}

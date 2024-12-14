@@ -1,0 +1,19 @@
+{
+  "name": "owntracks-server",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc && mkdir -p dist/static && cp -r static/* dist/static/",
+    "build:lambda": "tsc && mkdir -p dist/static && cp -r static/* dist/static/ && cd dist && zip -r ../lambda.zip ."
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.485.0",
+    "@aws-sdk/lib-dynamodb": "^3.485.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.126",
+    "@types/node": "^20.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,14 @@
+project-root/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── index.ts
+│   ├── server.ts
+│   ├── storage/
+│   │   ├── interfaces.ts
+│   │   ├── local-file-storage.ts
+│   │   └── dynamodb-storage.ts
+│   └── utils/
+│       └── auth.ts
+└── static/
+    └── index.html
