@@ -1,18 +1,18 @@
 import { DynamoDBStorage } from './storage/dynamodb-storage';
-import { 
-  APIGatewayProxyEvent, 
-  APIGatewayProxyResult, 
-  Context 
+import {
+  APIGatewayProxyEvent,
+  APIGatewayProxyResult,
+  Context
 } from 'aws-lambda';
-import { 
-  extractBasicAuthCredentials, 
-  verifyPassword 
+import {
+  extractBasicAuthCredentials,
+  verifyPassword
 } from './utils/auth';
 
 const storage = new DynamoDBStorage();
 
 export const handler = async (
-  event: APIGatewayProxyEvent, 
+  event: APIGatewayProxyEvent,
   context: Context
 ): Promise<APIGatewayProxyResult> => {
   await storage.initialize();
@@ -70,7 +70,7 @@ export const handler = async (
 
     // Fetch and return all locations in the user's friend group
     const groupLocations = await storage.getUserLocationsInGroup(userCredentials.friend_group);
-    
+   
     // Replace tid with username
     const response = groupLocations.map(entry => ({
       ...entry.location,
