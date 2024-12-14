@@ -84,6 +84,7 @@ Resources:
       Environment:
         Variables:
           DYNAMO_MODE: 'true'
+          CODE_KEY: !Ref LambdaCodeKey
       Timeout: 10
       MemorySize: 256
 
@@ -101,7 +102,7 @@ Resources:
       IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OwnTracksLambdaFunction.Arn}/invocations
       PayloadFormatVersion: '2.0'
 
-  OwnTracksApiPubRoute:
+  OwnTracksApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref OwnTracksApiGateway

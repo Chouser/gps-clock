@@ -1,24 +1,31 @@
-import { DynamoDBStorage } from './storage/dynamodb-storage';
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context
+import { 
+  APIGatewayProxyEvent, 
+  APIGatewayProxyResult, 
+  Context 
 } from 'aws-lambda';
+import * as path from 'path';
+import * as fs from 'fs';
+import { StorageInterface } from './storage/interfaces';
+import { LocalFileStorage } from './storage/local-file-storage';
+import { DynamoDBStorage } from './storage/dynamodb-storage';
 import {
   extractBasicAuthCredentials,
   verifyPassword
 } from './utils/auth';
-import * as path from 'path';
-import * as fs from 'fs';
 
-const storage = new DynamoDBStorage();
+// Select storage based on environment variable
+const isDynamoMode = process.env.DYNAMO_MODE === 'true';
+const storage: StorageInterface = isDynamoMode 
+  ? new DynamoDBStorage() 
+  : new LocalFileStorage();
 
 // Utility function to serve static files
 const serveStaticFile = (filePath: string): APIGatewayProxyResult => {
   try {
-    // Construct the full path to the file in the static directory
-    const fullPath = path.join('/tmp/static', filePath);
-    
+    // Construct the full path to the file
+    const staticDir = path.join(process.cwd(), 'static');
+    const fullPath = path.join(staticDir, filePath);
+
     // Check if file exists
     if (!fs.existsSync(fullPath)) {
       return {
@@ -47,19 +54,7 @@ const serveStaticFile = (filePath: string): APIGatewayProxyResult => {
       case '.js':
         contentType = 'application/javascript';
         break;
-      case '.json':
-        contentType = 'application/json';
-        break;
-      case '.png':
-        contentType = 'image/png';
-        break;
-      case '.jpg':
-      case '.jpeg':
-        contentType = 'image/jpeg';
-        break;
-      case '.svg':
-        contentType = 'image/svg+xml';
-        break;
+      // Add more content types as needed
     }
 
     return {
@@ -68,8 +63,7 @@ const serveStaticFile = (filePath: string): APIGatewayProxyResult => {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*'
       },
-      body: fileContents,
-      isBase64Encoded: false
+      body: fileContents
     };
   } catch (error) {
     console.error('Error serving static file:', error);
@@ -84,54 +78,24 @@ const serveStaticFile = (filePath: string): APIGatewayProxyResult => {
   }
 };
 
-// Unzip static files to /tmp during initialization
-const unzipStaticFiles = () => {
-  const { execSync } = require('child_process');
-  
-  try {
-    // Create static directory in /tmp
-    fs.mkdirSync('/tmp/static', { recursive: true });
-    
-    // Unzip the static files from the lambda package
-    execSync('unzip /opt/nodejs/lambda.zip "static/*" -d /tmp');
-  } catch (error) {
-    console.error('Error unzipping static files:', error);
-  }
-};
-
 export const handler = async (
-  event: APIGatewayProxyEvent,
+  event: APIGatewayProxyEvent, 
   context: Context
 ): Promise<APIGatewayProxyResult> => {
-  // Unzip static files on first invocation
-  if (!fs.existsSync('/tmp/static')) {
-    unzipStaticFiles();
-  }
-
+  // Initialize storage
   await storage.initialize();
 
-  // Basic CORS headers
+  // Standard CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Credentials': true,
     'Content-Type': 'application/json'
   };
 
-  // Handle static file serving for GET requests
-  if (event.httpMethod === 'GET') {
-    // Serve index.html for root route
-    if (event.path === '/') {
-      return serveStaticFile('index.html');
-    }
-
-    // Remove leading slash for file path
-    const filePath = event.path.startsWith('/') ? event.path.slice(1) : event.path;
-    return serveStaticFile(filePath);
-  }
-
-  // Existing POST /pub handler
   try {
-    const authHeader = event.headers?.Authorization;
+    // Extract and verify credentials
+    const authHeader = event.headers?.authorization;
+    console.log("headers", event.headers);
     const credentials = extractBasicAuthCredentials(authHeader);
 
     if (!credentials) {
@@ -153,41 +117,68 @@ export const handler = async (
       };
     }
 
-    // Only handle POST to /pub
-    if (event.httpMethod !== 'POST' || !event.body) {
+    // Handle different routes and methods
+    if (event.httpMethod === 'GET') {
+      // Serve static files
+      if (event.path === '/' || event.path === '') {
+        return serveStaticFile('index.html');
+      }
+      
+      // Serve other static files if needed
+      const requestPath = event.path.startsWith('/') 
+        ? event.path.slice(1) 
+        : event.path;
+      return serveStaticFile(requestPath);
+    }
+
+    if (event.httpMethod === 'POST' && event.path === '/pub') {
+      // Publish location
+      if (!event.body) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ message: 'Invalid request' })
+        };
+      }
+
+      const locationData = JSON.parse(event.body);
+
+      if (locationData._type !== 'location') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ message: 'Invalid location data' })
+        };
+      }
+
+      // Store the location
+      await storage.saveUserLocation(username, locationData);
+
+      // Fetch locations for the user's friend group
+      const groupLocations = await storage.getUserLocationsInGroup(userCredentials.friend_group);
+
+      // Prepare response, filtering out the current user's location
+      const response = groupLocations
+        .filter(entry => entry.username !== username)
+        .map(entry => ({
+          ...entry.location,
+          tid: entry.username
+        }));
+
       return {
-        statusCode: 400,
+        statusCode: 200,
         headers,
-        body: JSON.stringify({ message: 'Invalid request' })
+        body: JSON.stringify(response)
       };
     }
 
-    const locationData = JSON.parse(event.body);
-    if (locationData._type !== 'location') {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ message: 'Invalid location data' })
-      };
-    }
-
-    // Store the location
-    await storage.saveUserLocation(username, locationData);
-
-    // Fetch and return all locations in the user's friend group
-    const groupLocations = await storage.getUserLocationsInGroup(userCredentials.friend_group);
-   
-    // Replace tid with username
-    const response = groupLocations.map(entry => ({
-      ...entry.location,
-      tid: entry.username
-    }));
-
+    // Unsupported method or route
     return {
-      statusCode: 200,
+      statusCode: 405,
       headers,
-      body: JSON.stringify(response)
+      body: JSON.stringify({ message: 'Method Not Allowed' })
     };
+
   } catch (error) {
     console.error('Lambda handler error:', error);
     return {
