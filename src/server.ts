@@ -86,13 +86,12 @@ export class OwnTracksServer {
     }
 
     const locationData = JSON.parse(body);
-    if (locationData._type !== 'location') {
-      res.writeHead(400);
-      return res.end('Invalid location data');
-    }
+    console.log("body", locationData);
 
-    // Store the location
-    await this.storage.saveUserLocation(username, locationData);
+    if (locationData._type == 'location') {
+      // Store the location
+      await this.storage.saveUserLocation(username, locationData);
+    }
 
     // Fetch and return all locations in the user's friend group
     const groupLocations = await this.storage.getUserLocationsInGroup(userFriendGroup);
