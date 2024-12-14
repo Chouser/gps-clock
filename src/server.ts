@@ -97,10 +97,12 @@ export class OwnTracksServer {
     const groupLocations = await this.storage.getUserLocationsInGroup(userFriendGroup);
 
     // Replace tid with username
-    const response = groupLocations.map(entry => ({
-      ...entry.location,
-      tid: entry.username
-    }));
+    const response = groupLocations
+      .filter(entry => entry.username != username)
+      .map(entry => ({
+        ...entry.location,
+        tid: entry.username
+      }));
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(response));
