@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'OwnTracks Lambda Deployment'
+Description: 'OwnTracks Lambda Deployment with Static File Serving'
 
 Parameters:
   LambdaCodeBucket:
@@ -101,11 +101,25 @@ Resources:
       IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OwnTracksLambdaFunction.Arn}/invocations
       PayloadFormatVersion: '2.0'
 
-  OwnTracksApiRoute:
+  OwnTracksApiPubRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref OwnTracksApiGateway
       RouteKey: 'POST /pub'
+      Target: !Sub integrations/${OwnTracksApiIntegration}
+
+  OwnTracksApiRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref OwnTracksApiGateway
+      RouteKey: 'GET /'
+      Target: !Sub integrations/${OwnTracksApiIntegration}
+
+  OwnTracksApiStaticRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref OwnTracksApiGateway
+      RouteKey: 'GET /{proxy+}'
       Target: !Sub integrations/${OwnTracksApiIntegration}
 
   OwnTracksApiStage:
@@ -121,12 +135,12 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref OwnTracksLambdaFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${OwnTracksApiGateway}/*/*/pub
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${OwnTracksApiGateway}/*/*
 
 Outputs:
   OwnTracksApiEndpoint:
     Description: API Gateway endpoint URL for Prod stage
-    Value: !Sub https://${OwnTracksApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/pub
+    Value: !Sub https://${OwnTracksApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/
   OwnTracksUsersTableArn:
     Description: ARN of the Users DynamoDB Table
     Value: !GetAtt OwnTracksUsersTable.Arn

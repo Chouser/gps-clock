@@ -1,10 +1,18 @@
 # OwnTracks Server
 
-## Local test Deployment
+## Local test
 
 ```bash
 npm install
-npm start
+PORT=8888 npm start
+```
+
+### Using curl with basic auth
+```bash
+curl -v -u testuser:hello \
+  -H "Content-Type: application/json" \
+  -d '{"_type":"location","lat":40.7128,"lon":-74.0060}' \
+  http://localhost:8888/pub
 ```
 
 ## AWS Lambda Deployment
@@ -21,7 +29,7 @@ npm run build:lambda
 
 2. Upload to S3:
 ```bash
-aws s3 cp lambda.zip s3://your-bucket-name/owntracks/
+aws s3 cp lambda.zip s3://your-bucket-name/
 ```
 
 3. Deploy CloudFormation:
@@ -31,7 +39,6 @@ aws cloudformation create-stack \
   --template-body file://cloudformation.yml \
   --parameters \
     ParameterKey=LambdaCodeBucket,ParameterValue=your-bucket-name \
-    ParameterKey=LambdaCodeKey,ParameterValue=owntracks/lambda.zip \
   --capabilities CAPABILITY_IAM
 ```
 
