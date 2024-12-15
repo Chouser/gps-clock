@@ -1,7 +1,7 @@
-import { 
-  APIGatewayProxyEvent, 
-  APIGatewayProxyResult, 
-  Context 
+import {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyResult,
+  Context
 } from 'aws-lambda';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -79,7 +79,7 @@ const serveStaticFile = (filePath: string): APIGatewayProxyResult => {
 };
 
 export const handler = async (
-  event: APIGatewayProxyEvent, 
+  event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResult> => {
   // Initialize storage
@@ -101,7 +101,7 @@ export const handler = async (
     if (!credentials) {
       return {
         statusCode: 401,
-        headers,
+        headers: {...headers, 'WWW-Authenticate': 'Basic realm="OwnTracks"' },
         body: JSON.stringify({ message: 'Unauthorized' })
       };
     }
@@ -117,21 +117,26 @@ export const handler = async (
       };
     }
 
+    console.log("Event", event);
+    const req = event.requestContext.http;
+    const reqPath = req.path.slice(event.requestContext.stage.length + 1);
+
+    console.log("reqPath", reqPath);
     // Handle different routes and methods
-    if (event.httpMethod === 'GET') {
+    if (req.method === 'GET') {
       // Serve static files
-      if (event.path === '/' || event.path === '') {
+      if (reqPath === '/' || reqPath === '') {
         return serveStaticFile('index.html');
       }
-      
+
       // Serve other static files if needed
-      const requestPath = event.path.startsWith('/') 
-        ? event.path.slice(1) 
-        : event.path;
+      const requestPath = reqPath.startsWith('/')
+        ? reqPath.slice(1)
+        : reqPath;
       return serveStaticFile(requestPath);
     }
 
-    if (event.httpMethod === 'POST' && event.path === '/pub') {
+    if (req.method === 'POST' && reqPath === '/pub') {
       // Publish location
       if (!event.body) {
         return {
