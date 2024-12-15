@@ -59,7 +59,10 @@ export async function handleRequest(storage: StorageInterface, req: Request) : P
   const [username, password] = Buffer.from(base64Credentials, 'base64').toString('ascii').split(':');
 
   const userCredentials = await storage.getUserCredentials(username);
-  if (!userCredentials || hashPassword(password) !== userCredentials.hashed_password) {
+  if (userCredentials?.hashed_password !== 'tbd'
+    && (!userCredentials
+        || hashPassword(password) !== userCredentials.hashed_password))
+  {
     return unauthorizedResponse;
   }
 
@@ -67,6 +70,9 @@ export async function handleRequest(storage: StorageInterface, req: Request) : P
   if (req.method === 'POST' && req.path === '/pub') {
     const body = JSON.parse(req.bodyString);
     if (body._type == 'location') {
+      if(userCredentials.hashed_password === 'tbd') {
+        await storage.setUserCredentials(username, hashPassword(password));
+      }
       await storage.saveUserLocation(username, userCredentials.friend_group, body);
     }
 

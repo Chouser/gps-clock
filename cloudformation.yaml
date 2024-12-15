@@ -65,6 +65,7 @@ Resources:
                 Action:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
+                  - dynamodb:UpdateItem
                   - dynamodb:Query
                 Resource:
                   - !GetAtt OwnTracksUsersTable.Arn

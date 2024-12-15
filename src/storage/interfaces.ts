@@ -9,6 +9,7 @@ export interface LocationData {
 
 export interface StorageInterface {
   getUserCredentials(username: string): Promise<UserCredentials | null>;
+  setUserCredentials(username: string, hashed_password: string): Promise<void>;
   saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void>;
   getUserLocationsInGroup(friendGroup: string): Promise<{username: string, location: LocationData}[]>;
   initialize(): Promise<void>;

@@ -39,6 +39,13 @@ export class LocalFileStorage implements StorageInterface {
     return this.users[username] || null;
   }
 
+  async setUserCredentials(username: string, hashed_password: string): Promise<void> {
+    if(this.users[username].hashed_password == 'tbd') {
+      this.users[username].hashed_password = hashed_password;
+      await fs.writeFile(this.usersFilePath, JSON.stringify(this.users, null, 2));
+    }
+  }
+
   async saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void> {
     this.locations[username] = location;
     await fs.writeFile(this.locationsFilePath, JSON.stringify(this.locations, null, 2));
