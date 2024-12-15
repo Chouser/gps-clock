@@ -86,7 +86,7 @@ Resources:
           DYNAMO_MODE: 'true'
           CODE_KEY: !Ref LambdaCodeKey
       Timeout: 10
-      MemorySize: 256
+      MemorySize: 128
 
   OwnTracksApiGateway:
     Type: AWS::ApiGatewayV2::Api

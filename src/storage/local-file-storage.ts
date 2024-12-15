@@ -16,7 +16,7 @@ export class LocalFileStorage implements StorageInterface {
   async initialize(): Promise<void> {
     try {
       await fs.mkdir(path.dirname(this.usersFilePath), { recursive: true });
-      
+
       try {
         const usersData = await fs.readFile(this.usersFilePath, 'utf8');
         this.users = JSON.parse(usersData);

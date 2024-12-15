@@ -1,15 +1,15 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { 
-  DynamoDBDocumentClient, 
-  GetCommand, 
-  PutCommand, 
-  QueryCommand 
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  QueryCommand
 } from "@aws-sdk/lib-dynamodb";
 import { StorageInterface, UserCredentials, LocationData } from './interfaces';
 
 export class DynamoDBStorage implements StorageInterface {
   private client: DynamoDBDocumentClient;
-  
+
   constructor(
     private usersTableName: string = 'OwnTracksUsers',
     private locationsTableName: string = 'OwnTracksLocations'
@@ -32,10 +32,15 @@ export class DynamoDBStorage implements StorageInterface {
   }
 
   async saveUserLocation(username: string, locationData: LocationData): Promise<void> {
+    console.log("saveUser", {
+        username,
+        location: locationData,
+        friend_group: locationData.friend_group || ''
+      });
     await this.client.send(new PutCommand({
       TableName: this.locationsTableName,
-      Item: { 
-        username, 
+      Item: {
+        username,
         location: locationData,
         friend_group: locationData.friend_group || ''
       }
