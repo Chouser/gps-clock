@@ -15,6 +15,17 @@ curl -v -u testuser:hello \
   http://localhost:8888/pub
 ```
 
+### Local test with DynamoDB
+
+Freshen up the local temp credentials:
+```bash
+aws sts get-session-token --duration-seconds 3600 | jq -r '.Credentials | "[default]\naws_access_key_id=\(.AccessKeyId)\naws_secret_access_key=\(.SecretAccessKey)\naws_session_token=\(.SessionToken)"' > ~/.aws/credentials
+```
+
+```bash
+AWS_REGION=us-east-2 AWS_PROFILE=default DYNAMO_MODE=true PORT=8888 npm start
+```
+
 ## AWS Lambda Deployment
 
 ### Prerequisites

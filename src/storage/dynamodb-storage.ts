@@ -31,19 +31,10 @@ export class DynamoDBStorage implements StorageInterface {
     return Item as UserCredentials || null;
   }
 
-  async saveUserLocation(username: string, locationData: LocationData): Promise<void> {
-    console.log("saveUser", {
-        username,
-        location: locationData,
-        friend_group: locationData.friend_group || ''
-      });
+  async saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void> {
     await this.client.send(new PutCommand({
       TableName: this.locationsTableName,
-      Item: {
-        username,
-        location: locationData,
-        friend_group: locationData.friend_group || ''
-      }
+      Item: { friend_group, username, location }
     }));
   }
 

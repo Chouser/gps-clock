@@ -67,7 +67,7 @@ export async function handleRequest(storage: StorageInterface, req: Request) : P
   if (req.method === 'POST' && req.path === '/pub') {
     const body = JSON.parse(req.bodyString);
     if (body._type == 'location') {
-      await storage.saveUserLocation(username, body);
+      await storage.saveUserLocation(username, userCredentials.friend_group, body);
     }
 
     const groupLocations = await storage.getUserLocationsInGroup(userCredentials.friend_group);

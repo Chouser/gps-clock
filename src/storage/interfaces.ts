@@ -9,7 +9,7 @@ export interface LocationData {
 
 export interface StorageInterface {
   getUserCredentials(username: string): Promise<UserCredentials | null>;
-  saveUserLocation(username: string, locationData: LocationData): Promise<void>;
+  saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void>;
   getUserLocationsInGroup(friendGroup: string): Promise<{username: string, location: LocationData}[]>;
   initialize(): Promise<void>;
 }
