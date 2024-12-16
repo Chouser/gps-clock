@@ -3,6 +3,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { StorageInterface } from './storage/interfaces';
 
+const googleApiKey = process.env.GOOGLE_API_KEY;
+
 export interface Request {
     method: string;
     path: string;
@@ -101,7 +103,10 @@ export async function handleRequest(storage: StorageInterface, req: Request) : P
     try {
       return {
         status: 200,
-        headers: {'Content-Type': extType[ext]},
+        headers: {
+          'Content-Type': extType[ext],
+          'Set-Cookie': `googleApiKey=${googleApiKey}; SameSite=Strict`
+        },
         // not sure how to support binary files in lambda responses yet:
         bodyString: await fs.readFile(filePath, {encoding: "utf-8"})
       }

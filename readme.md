@@ -1,5 +1,7 @@
 # OwnTracks Server
 
+You'll need to set GOOGLE_API_KEY (could put it in env.sh)
+
 ## Create a new user
 
 This will create a new user named `ch` in friend-group `friends`:

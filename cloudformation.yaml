@@ -2,6 +2,9 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'OwnTracks Lambda Deployment with Static File Serving'
 
 Parameters:
+  GoogleApiKey:
+    Type: String
+    Description: Key passed via cookie to client JavaScript
   LambdaCodeBucket:
     Type: String
     Description: S3 bucket containing the Lambda deployment package
@@ -84,6 +87,7 @@ Resources:
       Runtime: nodejs22.x
       Environment:
         Variables:
+          GOOGLE_API_KEY: !Ref GoogleApiKey
           DYNAMO_MODE: 'true'
           CODE_KEY: !Ref LambdaCodeKey
       Timeout: 10
