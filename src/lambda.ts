@@ -22,7 +22,6 @@ export const handler = async (
     // Initialize storage
     await storage.initialize();
 
-    console.log("Event", event);
     const req = event.requestContext.http;
 
     const resp = await common.handleRequest(storage, {

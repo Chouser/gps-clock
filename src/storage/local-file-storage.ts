@@ -2,30 +2,27 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { StorageInterface, UserCredentials, LocationData } from './interfaces';
 
+const usersFilePath     = './data/users.json';
+const locationsFilePath = './data/locations.json';
+const rectsFilePath     = './data/rects.json';
+
 export class LocalFileStorage implements StorageInterface {
-  private usersFilePath: string;
-  private locationsFilePath: string;
   private users: Record<string, UserCredentials> = {};
   private locations: Record<string, LocationData> = {};
 
-  constructor(baseDir: string = './data') {
-    this.usersFilePath = path.join(baseDir, 'users.json');
-    this.locationsFilePath = path.join(baseDir, 'locations.json');
-  }
-
   async initialize(): Promise<void> {
     try {
-      await fs.mkdir(path.dirname(this.usersFilePath), { recursive: true });
+      await fs.mkdir(path.dirname(usersFilePath), { recursive: true });
 
       try {
-        const usersData = await fs.readFile(this.usersFilePath, 'utf8');
+        const usersData = await fs.readFile(usersFilePath, 'utf8');
         this.users = JSON.parse(usersData);
       } catch {
         this.users = {};
       }
 
       try {
-        const locationsData = await fs.readFile(this.locationsFilePath, 'utf8');
+        const locationsData = await fs.readFile(locationsFilePath, 'utf8');
         this.locations = JSON.parse(locationsData);
       } catch {
         this.locations = {};
@@ -35,6 +32,14 @@ export class LocalFileStorage implements StorageInterface {
     }
   }
 
+  async saveRects(rects: any) {
+      await fs.writeFile(rectsFilePath, JSON.stringify(rects, null, 2));
+  }
+
+  async getRects() {
+    return JSON.parse(await fs.readFile(rectsFilePath, 'utf8'));
+  }
+
   async getUserCredentials(username: string): Promise<UserCredentials | null> {
     return this.users[username] || null;
   }
@@ -42,13 +47,13 @@ export class LocalFileStorage implements StorageInterface {
   async setUserCredentials(username: string, hashed_password: string): Promise<void> {
     if(this.users[username].hashed_password == 'tbd') {
       this.users[username].hashed_password = hashed_password;
-      await fs.writeFile(this.usersFilePath, JSON.stringify(this.users, null, 2));
+      await fs.writeFile(usersFilePath, JSON.stringify(this.users, null, 2));
     }
   }
 
   async saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void> {
     this.locations[username] = location;
-    await fs.writeFile(this.locationsFilePath, JSON.stringify(this.locations, null, 2));
+    await fs.writeFile(locationsFilePath, JSON.stringify(this.locations, null, 2));
   }
 
   async getUserLocationsInGroup(friendGroup: string): Promise<{username: string, location: LocationData}[]> {

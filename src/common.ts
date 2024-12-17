@@ -91,12 +91,20 @@ export async function handleRequest(storage: StorageInterface, req: Request) : P
     })
   }
 
+  // load/save rectangles
+  if (req.method === 'POST' && req.path === '/update-rects') {
+    await storage.saveRects(JSON.parse(req.bodyString));
+    return jsonResponse({status: 200, body: {msg: "saved successfully"}});
+  }
+  if (req.method === 'GET' && req.path === '/get-rects') {
+    return jsonResponse({status: 200, body: await storage.getRects()});
+  }
+
   // browser request
   if (req.method === 'GET') {
     const base = path.resolve('static');
     const filePath = path.resolve(base, '.' + (req.path == '/' ? '/index.html' : req.path));
     const ext = /[.][^.]*$/.exec(filePath)?.[0] || '.txt';
-    console.log({msg: `get file`, base, filePath, ext, mime: extType[ext]});
     if(!filePath.startsWith(base)) {
         return notFoundResponse;
     }

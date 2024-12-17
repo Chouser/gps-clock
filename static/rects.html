@@ -78,7 +78,8 @@
             // Drawing complete event
             google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rectangle) {
                 drawingManager.setDrawingMode(null);
-                addRectangleToMap(rectangle);
+                finishCreatingRect(rectangle);
+                editRectName(rectangle);
                 currentDrawing = null;
             });
         }
@@ -92,12 +93,22 @@
                     return response.json();
                 })
                 .then(data => {
-                    rectangles = data || [];
-                    renderRectangles();
-                })
-                .catch(() => {
-                    rectangles = [];
-                    renderRectangles();
+                    data.forEach(rectData => {
+                        const rectangle = new google.maps.Rectangle({
+                            bounds: {
+                                north: rectData.north,
+                                south: rectData.south,
+                                east: rectData.east,
+                                west: rectData.west
+                            },
+                            editable: true,
+                            draggable: true,
+                            map: map
+                        });
+
+                        rectangle.name = rectData.name;
+                        finishCreatingRect(rectangle);
+                    });
                 });
         }
 
@@ -110,9 +121,9 @@
 
         function editRectName(rectangle) {
             const newName = prompt('Enter rectangle name:', rectangle.name || '');
-            
+
             if (newName === null) return; // Cancel pressed
-            
+
             if (newName.trim() === '') {
                 // Delete rectangle if name is empty
                 rectangle.label.close();
@@ -126,27 +137,24 @@
             }
         }
 
-        function addRectangleToMap(rectangle, name = '') {
+        function finishCreatingRect(rectangle) {
+            rectangles.push(rectangle);
+
             // Add name label to rectangle
-            const label = new google.maps.InfoWindow({
+            rectangle.label = new google.maps.InfoWindow({
                 content: `<div class="rectangle-label">${rectangle.name}</div>`,
                 position: rectangle.getBounds().getCenter(),
                 disableAutoPan: true
             });
-
-            // Store label with rectangle
-            rectangle.label = label;
-
-            editRectName(rectangle);
+            rectangle.name && rectangle.label.open(map);
 
             rectangle.addListener('click', (event) => {
-                label.open(map);
+                rectangle.label.open(map);
             });
 
             // Double-click event to edit name
             rectangle.addListener('dblclick', (event) => {
                 editRectName(rectangle);
-                console.log(event);
                 event.domEvent.preventDefault();
             });
 
@@ -154,8 +162,6 @@
             rectangle.addListener('bounds_changed', () => {
                 label.setPosition(rectangle.getBounds().getCenter());
             });
-
-            rectangles.push(rectangle);
         }
 
         function saveRectangles() {
@@ -190,21 +196,6 @@
         }
 
         function renderRectangles() {
-            rectangles.forEach(rectData => {
-                const rectangle = new google.maps.Rectangle({
-                    bounds: {
-                        north: rectData.north,
-                        south: rectData.south,
-                        east: rectData.east,
-                        west: rectData.west
-                    },
-                    editable: true,
-                    draggable: true,
-                    map: map
-                });
-
-                addRectangleToMap(rectangle, rectData.name);
-            });
         }
 
         // Load Google Maps and initialize

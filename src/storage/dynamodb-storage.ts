@@ -45,6 +45,31 @@ export class DynamoDBStorage implements StorageInterface {
     }));
   }
 
+  async saveRects(rects: any) {
+    console.log({
+      msg: "saveRects",
+      rects: rects,
+      resp: await this.client.send(new PutCommand({
+        TableName: locationsTableName,
+        Item: {
+          username: 'rects',
+          friend_group: 'system',
+          location: rects
+        }
+      }))
+    });
+  }
+
+  async getRects() {
+    const resp = await this.client.send(new QueryCommand({
+      TableName: locationsTableName,
+      KeyConditionExpression: 'username = :rects',
+      ExpressionAttributeValues: { ':rects': 'rects' }
+    }));
+    console.log({msg: 'getRects', resp: resp })
+    return resp.Items?.[0].location;
+  }
+
   async saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void> {
     await this.client.send(new PutCommand({
       TableName: locationsTableName,
