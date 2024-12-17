@@ -8,28 +8,12 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            display: flex;
             height: 100vh;
-        }
-        #sidebar {
-            width: 250px;
-            background-color: #f0f0f0;
-            padding: 15px;
-            overflow-y: auto;
-            border-right: 1px solid #ccc;
+            overflow: hidden;
         }
         #map {
-            flex-grow: 1;
-        }
-        .rect-item {
-            background-color: white;
-            border: 1px solid #ddd;
-            margin-bottom: 10px;
-            padding: 10px;
-        }
-        .rect-item input {
             width: 100%;
-            margin-bottom: 5px;
+            height: 100%;
         }
         #controls {
             position: absolute;
@@ -40,18 +24,24 @@
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+        }
+        .rectangle-label {
+            background-color: white;
+            border: 1px solid black;
+            padding: 2px 5px;
+            font-size: 12px;
+            opacity: 0.7;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <div id="sidebar">
-        <h2>Rectangles</h2>
-        <div id="rectList"></div>
-        <button id="saveRectanglesBtn">Save Rectangles</button>
-    </div>
     <div id="map"></div>
     <div id="controls">
         <button id="drawRectBtn">Draw Rectangle</button>
+        <button id="saveRectanglesBtn">Save Rectangles</button>
     </div>
 
     <script>
@@ -88,7 +78,7 @@
             // Drawing complete event
             google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rectangle) {
                 drawingManager.setDrawingMode(null);
-                addRectangleToList(rectangle);
+                addRectangleToMap(rectangle);
                 currentDrawing = null;
             });
         }
@@ -118,35 +108,52 @@
             drawingManager.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
         }
 
-        function addRectangleToList(rectangle) {
-            const rectList = document.getElementById('rectList');
-            const rectItem = document.createElement('div');
-            rectItem.className = 'rect-item';
-
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.placeholder = 'Rectangle Name';
-            rectangle.nameInput = nameInput;
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.addEventListener('click', () => {
+        function editRectName(rectangle) {
+            const newName = prompt('Enter rectangle name:', rectangle.name || '');
+            
+            if (newName === null) return; // Cancel pressed
+            
+            if (newName.trim() === '') {
+                // Delete rectangle if name is empty
+                rectangle.label.close();
                 rectangle.setMap(null);
-                rectItem.remove();
                 rectangles = rectangles.filter(r => r !== rectangle);
+            } else {
+                // Update name
+                rectangle.name = newName;
+                rectangle.label.setContent(`<div class="rectangle-label">${newName}</div>`);
+                rectangle.label.open(map);
+            }
+        }
+
+        function addRectangleToMap(rectangle, name = '') {
+            // Add name label to rectangle
+            const label = new google.maps.InfoWindow({
+                content: `<div class="rectangle-label">${rectangle.name}</div>`,
+                position: rectangle.getBounds().getCenter(),
+                disableAutoPan: true
             });
 
+            // Store label with rectangle
+            rectangle.label = label;
+
+            editRectName(rectangle);
+
+            rectangle.addListener('click', (event) => {
+                label.open(map);
+            });
+
+            // Double-click event to edit name
+            rectangle.addListener('dblclick', (event) => {
+                editRectName(rectangle);
+                console.log(event);
+                event.domEvent.preventDefault();
+            });
+
+            // Update label position when rectangle moves
             rectangle.addListener('bounds_changed', () => {
-                // Update rectangle in the list
-                const index = rectangles.indexOf(rectangle);
-                if (index !== -1) {
-                    rectangles[index] = rectangle;
-                }
+                label.setPosition(rectangle.getBounds().getCenter());
             });
-
-            rectItem.appendChild(nameInput);
-            rectItem.appendChild(deleteBtn);
-            rectList.appendChild(rectItem);
 
             rectangles.push(rectangle);
         }
@@ -154,9 +161,8 @@
         function saveRectangles() {
             const rectangleData = rectangles.map(rect => {
                 const bounds = rect.getBounds();
-                const nameInput = rect.nameInput || { value: '' };
                 return {
-                    name: nameInput.value,
+                    name: rect.name || '',
                     north: bounds.getNorthEast().lat(),
                     south: bounds.getSouthWest().lat(),
                     east: bounds.getNorthEast().lng(),
@@ -184,9 +190,6 @@
         }
 
         function renderRectangles() {
-            const rectList = document.getElementById('rectList');
-            rectList.innerHTML = ''; // Clear existing list
-
             rectangles.forEach(rectData => {
                 const rectangle = new google.maps.Rectangle({
                     bounds: {
@@ -200,7 +203,7 @@
                     map: map
                 });
 
-                addRectangleToList(rectangle);
+                addRectangleToMap(rectangle, rectData.name);
             });
         }
 
