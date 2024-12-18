@@ -85,7 +85,7 @@
         }
 
         function fetchRectangles() {
-            fetch('/get-rects')
+            fetch('get-rects')
                 .then(response => {
                     if (!response.ok) {
                         return [];
@@ -176,7 +176,7 @@
                 };
             });
 
-            fetch('/update-rects', {
+            fetch('update-rects', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
