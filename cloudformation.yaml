@@ -111,21 +111,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref OwnTracksApiGateway
-      RouteKey: 'POST /pub'
-      Target: !Sub integrations/${OwnTracksApiIntegration}
-
-  OwnTracksApiRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref OwnTracksApiGateway
-      RouteKey: 'GET /'
-      Target: !Sub integrations/${OwnTracksApiIntegration}
-
-  OwnTracksApiStaticRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref OwnTracksApiGateway
-      RouteKey: 'GET /{proxy+}'
+      RouteKey: 'ANY /{proxy+}'
       Target: !Sub integrations/${OwnTracksApiIntegration}
 
   OwnTracksApiStage:
