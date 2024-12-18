@@ -122,9 +122,9 @@
         function editRectName(rectangle) {
             const newName = prompt('Enter rectangle name:', rectangle.name || '');
 
-            if (newName === null) return; // Cancel pressed
+            if (newName === null && rectangle.name ) return; // Cancel pressed
 
-            if (newName.trim() === '') {
+            if (newName === null || newName.trim() === '') {
                 // Delete rectangle if name is empty
                 rectangle.label.close();
                 rectangle.setMap(null);
