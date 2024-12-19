@@ -10,8 +10,8 @@ import { DynamoDBStorage } from './storage/dynamodb-storage';
 
 // Select storage based on environment variable
 const isDynamoMode = process.env.DYNAMO_MODE === 'true';
-const storage: StorageInterface = isDynamoMode 
-  ? new DynamoDBStorage() 
+const storage: StorageInterface = isDynamoMode
+  ? new DynamoDBStorage()
   : new LocalFileStorage();
 
 export const handler = async (

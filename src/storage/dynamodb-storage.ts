@@ -66,7 +66,7 @@ export class DynamoDBStorage implements StorageInterface {
       KeyConditionExpression: 'username = :rects',
       ExpressionAttributeValues: { ':rects': 'rects' }
     }));
-    console.log({msg: 'getRects', resp: resp })
+    console.log({ msg: 'getRects', resp: resp })
     return resp.Items?.[0].location;
   }
 
@@ -77,7 +77,7 @@ export class DynamoDBStorage implements StorageInterface {
     }));
   }
 
-  async getUserLocationsInGroup(friendGroup: string): Promise<{username: string, location: LocationData}[]> {
+  async getUserLocationsInGroup(friendGroup: string): Promise<{ username: string, location: LocationData }[]> {
     const { Items } = await this.client.send(new QueryCommand({
       TableName: locationsTableName,
       IndexName: 'FriendGroupIndex',

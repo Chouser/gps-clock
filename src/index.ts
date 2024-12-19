@@ -7,7 +7,7 @@ export const handler = require('./lambda').handler;
 
 console.log("Cold start, CodeKey", process.env.CODE_KEY)
 
-if (! isLambdaRuntime) {
+if (!isLambdaRuntime) {
   // Local server startup
   const port = parseInt(process.env.PORT || '3000');
   const isDynamoMode = process.env.DYNAMO_MODE === 'true';

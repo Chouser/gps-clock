@@ -2,9 +2,9 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { StorageInterface, UserCredentials, LocationData } from './interfaces';
 
-const usersFilePath     = './data/users.json';
+const usersFilePath = './data/users.json';
 const locationsFilePath = './data/locations.json';
-const rectsFilePath     = './data/rects.json';
+const rectsFilePath = './data/rects.json';
 
 export class LocalFileStorage implements StorageInterface {
   private users: Record<string, UserCredentials> = {};
@@ -33,7 +33,7 @@ export class LocalFileStorage implements StorageInterface {
   }
 
   async saveRects(rects: any) {
-      await fs.writeFile(rectsFilePath, JSON.stringify(rects, null, 2));
+    await fs.writeFile(rectsFilePath, JSON.stringify(rects, null, 2));
   }
 
   async getRects() {
@@ -45,7 +45,7 @@ export class LocalFileStorage implements StorageInterface {
   }
 
   async setUserCredentials(username: string, hashed_password: string): Promise<void> {
-    if(this.users[username].hashed_password == 'tbd') {
+    if (this.users[username].hashed_password == 'tbd') {
       this.users[username].hashed_password = hashed_password;
       await fs.writeFile(usersFilePath, JSON.stringify(this.users, null, 2));
     }
@@ -56,7 +56,7 @@ export class LocalFileStorage implements StorageInterface {
     await fs.writeFile(locationsFilePath, JSON.stringify(this.locations, null, 2));
   }
 
-  async getUserLocationsInGroup(friendGroup: string): Promise<{username: string, location: LocationData}[]> {
+  async getUserLocationsInGroup(friendGroup: string): Promise<{ username: string, location: LocationData }[]> {
     return Object.entries(this.locations)
       .filter(([username]) => {
         const userCredentials = this.users[username];

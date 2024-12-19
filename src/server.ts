@@ -44,7 +44,7 @@ export class OwnTracksServer {
       } catch (error) {
         console.error(error);
         res.writeHead(500);
-        res.end(JSON.stringify({ message: 'Internal Server Error'}));
+        res.end(JSON.stringify({ message: 'Internal Server Error' }));
       }
     });
 

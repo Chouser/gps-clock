@@ -13,6 +13,6 @@ export interface StorageInterface {
   saveRects(rects: any): Promise<void>;
   getRects(): Promise<any>;
   saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void>;
-  getUserLocationsInGroup(friendGroup: string): Promise<{username: string, location: LocationData}[]>;
+  getUserLocationsInGroup(friendGroup: string): Promise<{ username: string, location: LocationData }[]>;
   initialize(): Promise<void>;
 }
