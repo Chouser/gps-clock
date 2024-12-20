@@ -77,11 +77,11 @@ export async function handleRequest(storage: StorageInterface, req: Request): Pr
       await storage.saveUserLocation(username, userCredentials.friend_group, body);
     }
 
-    const groupLocations = await storage.getUserLocationsInGroup(userCredentials.friend_group);
+    const userLocs = await storage.getUserLocationsInGroup(userCredentials.friend_group);
 
     return jsonResponse({
       status: 200,
-      body: groupLocations
+      body: userLocs
         .filter(entry => entry.username != username)
         .map(entry => ({
           ...entry.location,
@@ -97,6 +97,28 @@ export async function handleRequest(storage: StorageInterface, req: Request): Pr
   }
   if (req.method === 'GET' && req.path === '/get-rects') {
     return jsonResponse({ status: 200, body: await storage.getRects() });
+  }
+
+  // clock request
+  if (req.method === 'GET' && req.path === '/friend-labels') {
+    const userLocs = await storage.getUserLocationsInGroup(userCredentials.friend_group);
+    const rects = await storage.getRects();
+    return jsonResponse({
+      status: 200,
+      body: userLocs.map(locEntry => { // O(n*m) boo
+        const loc = locEntry.location;
+        const label =
+          (locEntry.location.vel > 6)  // km/h, slow jog
+            ? 'moving'
+            : rects.find(rect =>
+              loc.lat < rect.north &&
+              loc.lat > rect.south &&
+              loc.lon < rect.east &&
+              loc.lon > rect.west)
+              ?.name || 'unknown';
+        return {username: locEntry.username, label};
+      })
+    })
   }
 
   // browser request
