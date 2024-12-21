@@ -68,7 +68,13 @@
        id="image1-5"
        x="3.9520097"
        y="37.162003" /><g
-       id="hand"><path
+       id="hand">
+       <animateTransform
+         attributeName="transform"
+         type="rotate" from="0 103 136" to="0 103 136"
+         dur="2s" fill="freeze"
+         calcMode="spline" keyTimes="0;1" keySplines="0.80 0 0.20 1" />
+       <path
          style="fill:#6f4d36;fill-opacity:1;stroke:#ffffff;stroke-width:0.4;stroke-linecap:round;stroke-opacity:0.51694572;stroke-dasharray:none"
          d="m 103.32602,74.602405 c 0,0 -3.946767,10.248932 -0.47429,16.92933 3.47248,6.680399 13.43566,12.875595 10.73912,22.186725 -2.69654,9.31114 -12.80915,14.63218 -14.925813,19.1301 -2.116667,4.49792 1.177826,5.84735 -2.790924,16.95985 2.862672,-6.06536 6.533537,-8.03573 8.627407,-9.75343 4.93143,-4.04548 2.54724,-8.92142 2.81183,-11.03808 0.26458,-2.11667 11.17413,-15.90582 11.7033,-19.34541 0.52917,-3.43958 -2.91042,-6.34999 -6.35,-10.054162 -3.43959,-3.704167 -7.42113,-5.858743 -3.98154,-10.35666 3.43958,-4.497916 -5.26452,-14.681842 -5.26452,-14.681842"
          id="path4" /><text
@@ -142,7 +148,15 @@
         if(angle === null) {
           angle = angles.unknown;
         }
-        hand.setAttribute('transform', `rotate(${angle} 103 136)`);
+        const anim = hand.getElementsByTagName('animateTransform')[0];
+        anim.setAttribute('from', anim.getAttribute('to'));
+        anim.setAttribute('to', `${angle} 103 136`);
+        anim.beginElement();
+      }
+      function simulate() {
+        const ks = Object.keys(angles);
+        moveHand(`x${Math.trunc(Math.random() * 5)}`, ks[Math.trunc(Math.random() * ks.length)]);
+        setTimeout(simulate, 2000);
       }
       function getFriendLabels() {
         fetch('friend-labels')
