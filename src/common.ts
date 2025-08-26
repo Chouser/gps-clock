@@ -52,6 +52,44 @@ const extType: { [name: string]: string } = {
   '.js': 'application/javascript'
 }
 
+
+// These should be configurable per-clock:
+const handFriend = ['u2', 'testuser'];
+const labelAngle = {
+  home: 0,
+  basecamp: 60,
+  school: 120,
+  church: 180,
+  unknown: 240,
+  moving: 300,
+};
+const errorAngle = 330;
+
+async function handAngles(storage: StorageInterface, friendGroup: string):Promise<number[]> {
+  const userLocs = await storage.getUserLocationsInGroup(friendGroup);
+  console.log("userLocs", userLocs);
+  const rects = await storage.getRects();
+  return handFriend.map(username => {
+    console.log("username", username);
+    const locEntry =
+      userLocs.find(locEntry => locEntry.username == username); // O(n*m) boo
+    console.log("locEntry", locEntry);
+    if (!locEntry) { return errorAngle; }
+    const loc = locEntry.location;
+    const label =
+      (locEntry.location.vel > 6)  // km/h, slow jog
+        ? 'moving'
+        : rects.find(rect => // O(n*m) again!
+          loc.lat < rect.north &&
+          loc.lat > rect.south &&
+          loc.lon < rect.east &&
+          loc.lon > rect.west)
+          ?.name || 'unknown';
+    console.log("label", label);
+    return labelAngle[label as keyof typeof labelAngle] ?? errorAngle;
+  })
+}
+
 export async function handleRequest(storage: StorageInterface, req: Request): Promise<Response> {
   if (!req.authHeader || !req.authHeader.startsWith('Basic ')) {
     return unauthorizedResponse;
@@ -99,7 +137,7 @@ export async function handleRequest(storage: StorageInterface, req: Request): Pr
     return jsonResponse({ status: 200, body: await storage.getRects() });
   }
 
-  // clock request
+  // clock request v1
   if (req.method === 'GET' && req.path === '/friend-labels') {
     const userLocs = await storage.getUserLocationsInGroup(userCredentials.friend_group);
     const rects = await storage.getRects();
@@ -118,6 +156,14 @@ export async function handleRequest(storage: StorageInterface, req: Request): Pr
               ?.name || 'unknown';
         return {username: locEntry.username, label};
       })
+    })
+  }
+
+  // clock request v2
+  if (req.method === 'GET' && req.path === '/hand-angles') {
+    return jsonResponse({
+      status: 200,
+      body: await handAngles(storage, userCredentials.friend_group)
     })
   }
 

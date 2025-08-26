@@ -2,3 +2,5 @@
 /node_modules
 /lambda.zip
 /env.sh
+/pico-code/secrets.py
+/notes.txt
