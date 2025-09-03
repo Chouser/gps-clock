@@ -33,10 +33,25 @@ def connect_wifi(ssid, password):
         print("Failed to connect to WiFi. Check SSID/Password or signal.")
         return False
 
+def shortest_direction(m, current, goal):
+    pos_dist = (goal - current) % m
+    neg_dist = (current - goal) % m
+    return 1 if pos_dist <= neg_dist else -1
+
+pin_ptn = [[1, 0, 0, 0],
+           [1, 1, 0, 0],
+           [0, 1, 0, 0],
+           [0, 1, 1, 0],
+           [0, 0, 1, 0],
+           [0, 0, 1, 1],
+           [0, 0, 0, 1],
+           [1, 0, 0, 1]
+           ]
+
 class Stepper:
     def __init__(self, pins, calibrate_button):
-        self.steps_per_revolution=6656  # 2048 * 26 / 8 = 6656
-        self.min_delay_ms = 2 # schedule steps no sooner than this
+        self.steps_per_revolution=13312  # 2048 * 2 half steps * 26 big gear teeth / 8 small gear teeth = 13312
+        self.min_delay_ms = 1 # schedule steps no sooner than this
         self.accel = 4 # how much speed to add each second
 
         self.pins = [Pin(pin, Pin.OUT) for pin in pins]
@@ -52,28 +67,28 @@ class Stepper:
 
     def _set_step(self, step):
         self.step = step % self.steps_per_revolution
-        self._set_pins([1 if (self.step % 4 == n) else 0 for n in range(4)])
+        self._set_pins(pin_ptn[self.step % len(pin_ptn)])
 
     def _update(self, timer=None):
-        self._set_step( self.step + 1 if self.speed_sps > 0 else -1 )
+        self._set_step( self.step + (1 if self.speed_sps > 0 else -1) )
         if self.step == self.target_step:
             print("done", self.step)
             self.stop()
         else:
-            delay_ms = max(self.min_delay_ms, int(1000 / self.speed_sps))
+            delay_ms = max(self.min_delay_ms, int(1000 / abs(self.speed_sps)))
             self.timer.init(mode=Timer.ONE_SHOT, period=delay_ms, callback=self._update)
 
     def set_target_angle(self, angle):
         self.target_step = int(angle * self.steps_per_revolution / 360) % self.steps_per_revolution
         print("set angle, step", angle, self.target_step)
-        self.speed_sps = 300
+        self.speed_sps = 1000 * shortest_direction(self.steps_per_revolution, self.step, self.target_step)
         self._update()
 
     def calibrate(self, button):
         print("Calibrating")
         while button.value() == 1: # drive motor while waiting for press
             self._set_step( self.step + 1 )
-            time.sleep(0.004)
+            time.sleep(0.001)
         self.step = 0
         self.stop()
         while button.value() == 0: # wait for release
