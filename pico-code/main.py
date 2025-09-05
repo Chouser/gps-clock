@@ -50,7 +50,7 @@ pin_ptn = [[1, 0, 0, 0],
 
 class Stepper:
     def __init__(self, pins, calibrate_button):
-        self.steps_per_revolution=13312  # 2048 * 2 half steps * 26 big gear teeth / 8 small gear teeth = 13312
+        self.steps_per_revolution=14336  # 2048 * 2 half steps * 28 big gear teeth / 8 small gear teeth = 13312
         self.min_delay_ms = 1 # schedule steps no sooner than this
         self.accel = 4 # how much speed to add each second
 
@@ -130,20 +130,21 @@ TIMER = Timer()
 
 try:
     button = Pin(14, Pin.IN, Pin.PULL_UP)
-    s1 = Stepper([6, 7, 8, 9], button)
-    s2 = Stepper([2, 3, 4, 5], button)
-    s3 = Stepper([10, 11, 12, 13], button)
-    s4 = Stepper([18, 19, 20, 21], button)
+    s1 = Stepper([10, 11, 12, 13], button)
+    s2 = Stepper([6, 7, 8, 9], button)
+    s3 = Stepper([18, 19, 20, 21], button)
+    s4 = Stepper([28, 27, 26, 22], button)
+    s5 = Stepper([2, 3, 4, 5], button)
 
     TIMER.init(mode=Timer.PERIODIC, period=100, callback=blink)
     connect_wifi(secrets.WIFI_SSID, secrets.WIFI_PASSWORD)
     TIMER.deinit()
 
-    for s in [s1, s2, s3, s4]:
+    for s in [s1, s2, s3, s4, s5]:
         s.calibrate(button)
         time.sleep(0.5)
 
-    fetcher = LocationFetcher(LED, [s1, s2, s3, s4])
+    fetcher = LocationFetcher(LED, [s1, s2, s3, s4, s5])
 
     # it is important to keep all the Steppers and fetcher in scope to prevent GC
     while True:
