@@ -103,9 +103,10 @@ class Stepper:
         self._set_pins([0, 0, 0, 0])
 
 class LocationFetcher:
-    def __init__(self, led, steppers):
+    def __init__(self, led, steppers, demo_mode):
         self.led = led
         self.steppers = steppers
+        self.demo_mode = demo_mode
         self.timer = Timer()
         self._update()
 
@@ -113,7 +114,11 @@ class LocationFetcher:
         self.led.value(1)
         try:
             angles = ujson.loads(secrets.fetch_angles().text)
-            angles = [int(random.random() * 360) for _ in range(5)]
+            if self.demo_mode:
+                if random.random() < 0.5:
+                    angles = [int(random.random() * 360) for _ in range(5)]
+                else:
+                    angles = [0, 0, 0, 0, 0]
             print("Fetched:", angles)
         finally:
             self.led.value(0)
@@ -146,7 +151,7 @@ try:
         s.calibrate(button)
         time.sleep(0.5)
 
-    fetcher = LocationFetcher(LED, [s1, s2, s3, s4, s5])
+    fetcher = LocationFetcher(LED, [s1, s2, s3, s4, s5], demo_mode=True)
 
     # it is important to keep all the Steppers and fetcher in scope to prevent GC
     while True:
