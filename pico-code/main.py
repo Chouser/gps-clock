@@ -78,12 +78,14 @@ class Stepper:
             delay_ms = max(self.min_delay_ms, int(1000 / abs(self.speed_sps)))
             self.timer.init(mode=Timer.ONE_SHOT, period=delay_ms, callback=self._update)
 
-    def set_target_angle(self, angle):
+    def set_target_angle(self, angle, delay=0.0):
         self.target_step = int(angle * self.steps_per_revolution / 360) % self.steps_per_revolution
         print("set angle, step", angle, self.target_step)
         self.speed_sps = 1000 * shortest_direction(self.steps_per_revolution, self.step, self.target_step)
-        self._update()
+        #self._update()
+        self.timer.init(mode=Timer.ONE_SHOT, period=int(delay*1000), callback=self._update)
 
+    # TODO rewrite to use timer, to avoid hogging the main thread which can prevent repl connection, etc.
     def calibrate(self, button):
         print("Calibrating")
         while button.value() == 1: # drive motor while waiting for press
@@ -113,11 +115,11 @@ class LocationFetcher:
             angles = ujson.loads(secrets.fetch_angles().text)
             angles = [int(random.random() * 360) for _ in range(5)]
             print("Fetched:", angles)
-            for angle, stepper in zip(angles, self.steppers):
-                stepper.set_target_angle(angle)
         finally:
             self.led.value(0)
             self.timer.init(mode=Timer.ONE_SHOT, period=30 * 1000, callback=self._update)
+        for angle, stepper, order in zip(angles, self.steppers, range(5)):
+            stepper.set_target_angle(angle, order * 3.0)
 
 LED = Pin(secrets.LED_PIN, Pin.OUT)
 LAST = 0
