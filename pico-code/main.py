@@ -49,11 +49,12 @@ pin_ptn = [[1, 0, 0, 0],
            ]
 
 class Stepper:
-    def __init__(self, pins, calibrate_button):
+    def __init__(self, name, pins, calibrate_button):
         self.steps_per_revolution=14336  # 2048 * 2 half steps * 28 big gear teeth / 8 small gear teeth = 13312
         self.min_delay_ms = 1 # schedule steps no sooner than this
         self.accel = 4 # how much speed to add each second
 
+        self.name = name
         self.pins = [Pin(pin, Pin.OUT) for pin in pins]
         self.calibrate_button = calibrate_button
         self.timer = Timer()
@@ -72,7 +73,7 @@ class Stepper:
     def _update(self, timer=None):
         self._set_step( self.step + (1 if self.speed_sps > 0 else -1) )
         if self.step == self.target_step:
-            print("done", self.step)
+            print(f"{self.name} done {self.step}")
             self.stop()
         else:
             delay_ms = max(self.min_delay_ms, int(1000 / abs(self.speed_sps)))
@@ -80,14 +81,14 @@ class Stepper:
 
     def set_target_angle(self, angle, delay=0.0):
         self.target_step = int(angle * self.steps_per_revolution / 360) % self.steps_per_revolution
-        print("set angle, step", angle, self.target_step)
+        print(f"{self.name} set target angle {angle}, step {self.target_step}")
         self.speed_sps = 1000 * shortest_direction(self.steps_per_revolution, self.step, self.target_step)
         #self._update()
         self.timer.init(mode=Timer.ONE_SHOT, period=int(delay*1000), callback=self._update)
 
     # TODO rewrite to use timer, to avoid hogging the main thread which can prevent repl connection, etc.
     def calibrate(self, button):
-        print("Calibrating")
+        print(f"{self.name} calibrating")
         while button.value() == 1: # drive motor while waiting for press
             self._set_step( self.step + 1 )
             time.sleep(0.001)
@@ -116,7 +117,7 @@ class LocationFetcher:
             angles = ujson.loads(secrets.fetch_angles().text)
             if self.demo_mode:
                 if random.random() < 0.5:
-                    angles = [int(random.random() * 360) for _ in range(5)]
+                    angles = [int(random.random() * 360) for _ in steppers]
                 else:
                     angles = [0, 0, 0, 0, 0]
             print("Fetched:", angles)
@@ -137,26 +138,22 @@ TIMER = Timer()
 
 try:
     button = Pin(14, Pin.IN, Pin.PULL_UP)
-    s1 = Stepper([10, 11, 12, 13], button)
-    s2 = Stepper([6, 7, 8, 9], button)
-    s3 = Stepper([18, 19, 20, 21], button)
-    s4 = Stepper([28, 27, 26, 22], button)
-    s5 = Stepper([2, 3, 4, 5], button)
+    steppers = [Stepper(name, pins, button) for (name, pins) in secrets.steppers]
 
     TIMER.init(mode=Timer.PERIODIC, period=100, callback=blink)
     connect_wifi(secrets.WIFI_SSID, secrets.WIFI_PASSWORD)
     TIMER.deinit()
 
-    for s in [s1, s2, s3, s4, s5]:
+    for s in steppers:
         s.calibrate(button)
         time.sleep(0.5)
 
-    fetcher = LocationFetcher(LED, [s1, s2, s3, s4, s5], demo_mode=True)
+    fetcher = LocationFetcher(LED, steppers, demo_mode=True)
 
     # it is important to keep all the Steppers and fetcher in scope to prevent GC
     while True:
         time.sleep(60)
 finally:
-    s1.stop()
+    [s.stop for s in steppers]
     TIMER.deinit()
     LED.value(0)
