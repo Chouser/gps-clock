@@ -12,6 +12,12 @@ Parameters:
     Type: String
     Description: S3 key for the Lambda deployment package
     Default: lambda.zip
+  DomainWildcard:
+    Type: String
+    Description: Domain name wildcard to use for the TLS certificate
+  DomainName:
+    Type: String
+    Description: Domain name to use for lamba API; should be within the DomainWildcard
 
 Resources:
   OwnTracksUsersTable:
@@ -129,7 +135,34 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${OwnTracksApiGateway}/*/*
 
+  OwnTracksApiCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainWildcard
+      ValidationMethod: DNS
+
+  OwnTracksApiDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameConfigurations:
+        - CertificateArn: !Ref OwnTracksApiCertificate
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+
+  OwnTracksApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Properties:
+      DomainName: !Ref OwnTracksApiDomainName
+      ApiId: !Ref OwnTracksApiGateway
+      Stage: !Ref OwnTracksApiStage
+
 Outputs:
+  CustomDomainTarget:
+    Description: "Target for your DNS CNAME record"
+    Value: !GetAtt OwnTracksApiDomainName.RegionalDomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-CustomDomainTarget"
   OwnTracksApiEndpoint:
     Description: API Gateway endpoint URL for Prod stage
     Value: !Sub https://${OwnTracksApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/

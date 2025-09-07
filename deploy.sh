@@ -12,4 +12,6 @@ op plugin run -- aws cloudformation update-stack \
   --parameters \
     ParameterKey=GoogleApiKey,ParameterValue="$GOOGLE_API_KEY" \
     ParameterKey=LambdaCodeBucket,ParameterValue="$S3BUCKET" \
-    ParameterKey=LambdaCodeKey,ParameterValue="$S3KEY"
+    ParameterKey=LambdaCodeKey,ParameterValue="$S3KEY" \
+    ParameterKey=DomainWildcard,ParameterValue="$DOMAIN_WILDCARD" \
+    ParameterKey=DomainName,ParameterValue="$DOMAIN_NAME"
