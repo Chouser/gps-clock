@@ -30,7 +30,7 @@ aws sts get-session-token --duration-seconds 3600 | jq -r '.Credentials | "[defa
 This will create a new user named `ch` in friend-group `friends`:
 
 ```bash
-AWS_REGION=us-east-2 AWS_PROFILE=default PORT=8888 npm run create-user ch friends
+AWS_REGION=us-east-2 AWS_PROFILE=default PORT=8888 npm run dynamo-ops create-user ch friends
 ```
 
 Whatever password is used in the next location update will be accepted and stored.

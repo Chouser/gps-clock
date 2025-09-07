@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "create-user": "ts-node src/create-user.ts",
+    "dynamo-ops": "ts-node src/dynamo-ops.ts",
     "build": "tsc && mkdir -p dist/static && cp -r static/* dist/static/",
     "build:lambda": "tsc && mkdir -p dist/static && cp -r static/* dist/static/ && cd dist && zip -r ../lambda.zip ."
   },
