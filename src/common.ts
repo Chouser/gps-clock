@@ -104,14 +104,14 @@ export async function handleRequest(storage: StorageInterface, req: Request): Pr
       || hashPassword(password) !== userCredentials.hashed_password)) {
     return unauthorizedResponse;
   }
+  if (userCredentials.hashed_password === 'tbd') {
+    await storage.setUserCredentials(username, hashPassword(password));
+  }
 
   // location posted from phone
   if (req.method === 'POST' && req.path === '/pub') {
     const body = JSON.parse(req.bodyString);
     if (body._type == 'location') {
-      if (userCredentials.hashed_password === 'tbd') {
-        await storage.setUserCredentials(username, hashPassword(password));
-      }
       await storage.saveUserLocation(username, userCredentials.friend_group, body);
     }
 
