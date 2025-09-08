@@ -5,13 +5,19 @@ npm run build:lambda
 S3KEY="lambda-$(date -Iseconds)-$(sha256sum lambda.zip | cut -c1-10).zip"
 op plugin run -- aws s3 cp lambda.zip "s3://$S3BUCKET/$S3KEY"
 
+cat > parameters.json <<END
+[
+    {"ParameterKey": "GoogleApiKey", "ParameterValue": "$GOOGLE_API_KEY"},
+    {"ParameterKey": "LambdaCodeBucket", "ParameterValue": "$S3BUCKET"},
+    {"ParameterKey": "LambdaCodeKey", "ParameterValue": "$S3KEY"},
+    {"ParameterKey": "DomainWildcard", "ParameterValue": "$DOMAIN_WILDCARD"},
+    {"ParameterKey": "DomainName", "ParameterValue": "$DOMAIN_NAME"},
+    {"ParameterKey": "ClockConfig", "ParameterValue": $(echo "$CLOCK_CONFIG" | jq -R .)}
+]
+END
+
 op plugin run -- aws cloudformation update-stack \
   --stack-name OwnTracksServer \
   --template-body file://cloudformation.yaml \
   --capabilities CAPABILITY_IAM \
-  --parameters \
-    ParameterKey=GoogleApiKey,ParameterValue="$GOOGLE_API_KEY" \
-    ParameterKey=LambdaCodeBucket,ParameterValue="$S3BUCKET" \
-    ParameterKey=LambdaCodeKey,ParameterValue="$S3KEY" \
-    ParameterKey=DomainWildcard,ParameterValue="$DOMAIN_WILDCARD" \
-    ParameterKey=DomainName,ParameterValue="$DOMAIN_NAME"
+  --parameters file://parameters.json

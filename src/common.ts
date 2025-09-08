@@ -5,6 +5,14 @@ import { StorageInterface } from './storage/interfaces';
 
 const googleApiKey = process.env.GOOGLE_API_KEY;
 
+// TODO support multiple clocks, and more dynamically
+interface ClockConfig {
+  handFriend: string[];
+  labelAngle: Record<string, number>;
+}
+
+const clockConfig = JSON.parse(process.env.CLOCK_CONFIG || "") as ClockConfig;
+
 export interface Request {
   method: string;
   path: string;
@@ -52,41 +60,35 @@ const extType: { [name: string]: string } = {
   '.js': 'application/javascript'
 }
 
-
-// These should be configurable per-clock:
-const handFriend = ['u2', 'testuser'];
-const labelAngle = {
-  home: 0,
-  basecamp: 60,
-  school: 120,
-  church: 180,
-  unknown: 240,
-  moving: 300,
-};
-const errorAngle = 330;
-
 async function handAngles(storage: StorageInterface, friendGroup: string):Promise<number[]> {
+  const labelAngle = clockConfig.labelAngle;
   const userLocs = await storage.getUserLocationsInGroup(friendGroup);
   console.log("userLocs", userLocs);
   const rects = await storage.getRects();
-  return handFriend.map(username => {
+  return clockConfig.handFriend.map(username => {
     console.log("username", username);
     const locEntry =
       userLocs.find(locEntry => locEntry.username == username); // O(n*m) boo
     console.log("locEntry", locEntry);
-    if (!locEntry) { return errorAngle; }
+    if (!locEntry) { return labelAngle.error; }
     const loc = locEntry.location;
     const label =
       (locEntry.location.vel > 6)  // km/h, slow jog
         ? 'moving'
-        : rects.find(rect => // O(n*m) again!
+        : rects.filter(rect => // Changed from find to filter
           loc.lat < rect.north &&
           loc.lat > rect.south &&
           loc.lon < rect.east &&
           loc.lon > rect.west)
+          .reduce((smallest, rect) => { // Find the smallest by area
+            if (!smallest) return rect;
+            const rectArea = (rect.north - rect.south) * (rect.east - rect.west);
+            const smallestArea = (smallest.north - smallest.south) * (smallest.east - smallest.west);
+            return rectArea < smallestArea ? rect : smallest;
+          }, null as any)
           ?.name || 'unknown';
     console.log("label", label);
-    return labelAngle[label as keyof typeof labelAngle] ?? errorAngle;
+    return labelAngle[label || 'error'];
   })
 }
 

@@ -18,6 +18,9 @@ Parameters:
   DomainName:
     Type: String
     Description: Domain name to use for lamba API; should be within the DomainWildcard
+  ClockConfig:
+    Type: String
+    Description: JSON describing the hands and angles of a physical device
 
 Resources:
   OwnTracksUsersTable:
@@ -94,6 +97,7 @@ Resources:
       Environment:
         Variables:
           GOOGLE_API_KEY: !Ref GoogleApiKey
+          CLOCK_CONFIG: !Ref ClockConfig
           DYNAMO_MODE: 'true'
           CODE_KEY: !Ref LambdaCodeKey
       Timeout: 10
