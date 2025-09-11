@@ -71,11 +71,11 @@ class Stepper:
         self._set_pins(pin_ptn[self.step % len(pin_ptn)])
 
     def _update(self, timer=None):
-        self._set_step( self.step + (1 if self.speed_sps > 0 else -1) )
         if self.step == self.target_step:
             print(f"{self.name} done {self.step}")
             self.stop()
         else:
+            self._set_step( self.step + (1 if self.speed_sps > 0 else -1) )
             delay_ms = max(self.min_delay_ms, int(1000 / abs(self.speed_sps)))
             self.timer.init(mode=Timer.ONE_SHOT, period=delay_ms, callback=self._update)
 
@@ -148,7 +148,7 @@ try:
         s.calibrate(button)
         time.sleep(0.5)
 
-    fetcher = LocationFetcher(LED, steppers, demo_mode=True)
+    fetcher = LocationFetcher(LED, steppers, demo_mode=False)
 
     # it is important to keep all the Steppers and fetcher in scope to prevent GC
     while True:
