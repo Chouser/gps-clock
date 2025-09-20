@@ -53,4 +53,23 @@ AWS_REGION=us-east-2 AWS_PROFILE=default DYNAMO_MODE=true PORT=8888 npm start
 S3BUCKET=your-bucket-name ./deploy.sh
 ```
 
+## Parts list
+
+Most of these parts can be substituded with a similar alternative. Amazon links are only provided for convenience, not as strong recommendations.
+
+1. one raspberry pi pico 2 w ($6)
+2. one [usb port](https://www.amazon.com/dp/B07X86YFFN) for power ($6)
+3. one [button](https://www.amazon.com/dp/B0BR41KCDP) for calibrating the hands ($6)
+4. for each clock hand a [stepper motor with driver board](https://www.amazon.com/dp/B01CP18J4A) ($15)
+5. [lots of female-to-female breadboard jumper wires](https://www.amazon.com//dp/B0B2L66ZFM), roughly 6 per hand plus 4, so 35 should be enough ($5)
+6. to mount the motors to the hub, "6-32 x 1/2inch" machine screw and matching nut times 2 for each hand (for five hands, 10 screws and 10 nuts) ($2 at local hardware store)
+7. to mount the driver boards to the box, "#6 x 1/2inch" flat head wood screws times 4 ($1 at local hardware store)
+
+Also requires a bit of soldering, 3d printed parts (I used PETG), and laser-cut parts (5mm plywood for the box, [1.5mm basswood](https://www.amazon.com/dp/B0CKKSLZ2C) for the hands).
+
+That comes to about $40 assuming you already have the wood, plastic, tools, solder, etc.
+
+Hosting the server on AWS looks like it's costing about $0.05/month.
+
+
 Copyright 2024 Chris Houser
