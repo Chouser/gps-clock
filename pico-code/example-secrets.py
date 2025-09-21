@@ -9,7 +9,7 @@ def fetch_angles():
                          timeout=10)
 
 LED_PIN = "LED"
-
+button_pin = 14
 steppers = [['aa', [10, 11, 12, 13]],
             ['bb', [6, 7, 8, 9]],
             ['cc', [18, 19, 20, 21]],

@@ -137,7 +137,7 @@ def blink(_):
 TIMER = Timer()
 
 try:
-    button = Pin(14, Pin.IN, Pin.PULL_UP)
+    button = Pin(secrets.button_pin, Pin.IN, Pin.PULL_UP)
     steppers = [Stepper(name, pins, button) for (name, pins) in secrets.steppers]
 
     TIMER.init(mode=Timer.PERIODIC, period=100, callback=blink)
