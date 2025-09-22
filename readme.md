@@ -59,7 +59,7 @@ S3BUCKET=your-bucket-name ./deploy.sh
 
 Most of these parts can be substituded with a similar alternative. Amazon links are only provided for convenience, not as strong recommendations.
 
-1. one raspberry pi pico 2 w ($6)
+1. one [raspberry pi pico 2 w -- with headers](https://www.adafruit.com/product/6315) ($8) 
 2. one [usb port](https://www.amazon.com/dp/B07X86YFFN) for power ($6)
 3. one [button](https://www.amazon.com/dp/B0BR41KCDP) for calibrating the hands ($6)
 4. for each clock hand a [stepper motor with driver board](https://www.amazon.com/dp/B01CP18J4A) ($15)
