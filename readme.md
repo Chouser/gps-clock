@@ -41,6 +41,33 @@ On the Pico, fetched hand angles are converted into stepper positions.
 
 Rectangle reads and writes use `GET /get-rects` and `POST /update-rects`.
 
+### Back up rectangles
+
+The backup tool saves the authenticated rectangle list in the same JSON shape
+accepted by `POST /update-rects`. Set the full URL for your deployment and
+supply the site's HTTP Basic Auth credentials, not AWS credentials:
+
+```bash
+export RECTANGLES_URL='https://your-domain.example/get-rects'
+RECTANGLES_USERNAME='your-user' \
+RECTANGLES_PASSWORD='your-password' \
+npm run backup:rectangles -- "rectangles-$(date +%F).json"
+```
+
+For a local server, use `http://localhost:8888/get-rects` instead.
+Redirects retain authentication on the original hostname
+or its `www` counterpart; protocol and port changes are rejected.
+
+The output file is created only if it does not already exist. To restore a
+backup later, post that file back to the endpoint:
+
+```bash
+curl --fail-with-body -u 'your-user:your-password' \
+  -H 'Content-Type: application/json' \
+  --data-binary @rectangles-YYYY-MM-DD.json \
+  "${RECTANGLES_URL%/get-rects}/update-rects"
+```
+
 ## Google Maps API key
 
 1. Create Google Cloud Project

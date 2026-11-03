@@ -4,6 +4,7 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "test": "npm run build && node --test test/*.test.js",
+    "backup:rectangles": "node tools/backup-rectangles.js",
     "dynamo-ops": "ts-node src/dynamo-ops.ts",
     "build": "tsc && mkdir -p dist/static && cp -r static/* dist/static/",
     "build:lambda": "tsc && mkdir -p dist/static && cp -r static/* dist/static/ && cd dist && zip -r ../lambda.zip ."
