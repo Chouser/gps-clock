@@ -171,6 +171,14 @@ test('LocalFileStorage loads and persists users, locations, and rectangles', asy
     const store = new LocalFileStorage();
     await store.initialize();
 
+    assert.deepEqual(await store.getRects(), []);
+    await fs.writeFile('data/rects.json', '{broken JSON');
+    await assert.rejects(store.getRects(), SyntaxError);
+    await fs.rm('data/rects.json');
+    await fs.mkdir('data/rects.json');
+    await assert.rejects(store.getRects(), { code: 'EISDIR' });
+    await fs.rmdir('data/rects.json');
+
     assert.deepEqual(await store.getUserLocationsInGroup('friends'), [
       { username: 'alice', location: { lat: 1 } }
     ]);
@@ -223,6 +231,16 @@ test('DynamoDBStorage sends the expected commands and maps results', async () =>
   assert.equal(calls[1].input.ConditionExpression, 'hashed_password = :tbd');
   assert.equal(calls[2].input.Item.username, 'alice');
   assert.equal(calls[3].input.Item.username, 'rects');
+});
+
+test('DynamoDBStorage returns an empty rectangle list for missing records and propagates failures', async () => {
+  const store = new DynamoDBStorage();
+  for (const response of [{}, { Items: [] }]) {
+    store.client = { send: async () => response };
+    assert.deepEqual(await store.getRects(), []);
+  }
+  store.client = { send: async () => { throw new Error('DynamoDB unavailable'); } };
+  await assert.rejects(store.getRects(), /DynamoDB unavailable/);
 });
 
 test('Lambda handler maps API Gateway paths and responses', async () => {

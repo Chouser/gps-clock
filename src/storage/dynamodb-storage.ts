@@ -67,7 +67,7 @@ export class DynamoDBStorage implements StorageInterface {
       ExpressionAttributeValues: { ':rects': 'rects' }
     }));
     console.log({ msg: 'getRects', resp: resp })
-    return resp.Items?.[0].location;
+    return resp.Items?.[0]?.location ?? [];
   }
 
   async saveUserLocation(username: string, friend_group: string, location: LocationData): Promise<void> {

@@ -194,6 +194,8 @@ In that example, a rectangle named `church` is valid because `labelAngle.church`
 3. Click `Edit rectangles`.
 
 The editor page loads Google Maps using `GOOGLE_API_KEY`, then loads any previously saved rectangles from `GET /get-rects`.
+The map fits the saved rectangles automatically. If loading fails, an error
+appears beside the buttons and saving stays disabled; reload the page to retry.
 
 ### Create a rectangle
 
@@ -203,6 +205,8 @@ The editor page loads Google Maps using `GOOGLE_API_KEY`, then loads any previou
 4. Click `Save Rectangles`.
 
 That writes the full rectangle list to `POST /update-rects`.
+Press Escape or click `Cancel Drawing` to cancel drawing. Cancelling the name
+prompt for a new rectangle discards that rectangle.
 
 ### Read existing rectangles
 
