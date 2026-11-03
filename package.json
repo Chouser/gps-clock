@@ -8,8 +8,8 @@
     "build:lambda": "tsc && mkdir -p dist/static && cp -r static/* dist/static/ && cd dist && zip -r ../lambda.zip ."
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.485.0",
-    "@aws-sdk/lib-dynamodb": "^3.485.0"
+    "@aws-sdk/client-dynamodb": "^3.972.0",
+    "@aws-sdk/lib-dynamodb": "^3.972.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.126",
