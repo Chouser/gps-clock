@@ -15,6 +15,7 @@ delete process.env.DYNAMO_MODE;
 const common = require('../dist/common');
 const { LocalFileStorage } = require('../dist/storage/local-file-storage');
 const { DynamoDBStorage } = require('../dist/storage/dynamodb-storage');
+const { handler } = require('../dist/lambda');
 const { OwnTracksServer } = require('../dist/server');
 
 function credentials(username, password) {
@@ -222,6 +223,43 @@ test('DynamoDBStorage sends the expected commands and maps results', async () =>
   assert.equal(calls[1].input.ConditionExpression, 'hashed_password = :tbd');
   assert.equal(calls[2].input.Item.username, 'alice');
   assert.equal(calls[3].input.Item.username, 'rects');
+});
+
+test('Lambda handler maps API Gateway paths and responses', async () => {
+  const originalCwd = process.cwd();
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gps-clock-lambda-'));
+  try {
+    process.chdir(tempDir);
+    await fs.mkdir('data');
+    await fs.writeFile('data/users.json', JSON.stringify({
+      alice: { friend_group: 'friends', hashed_password: common.hashPassword('secret') }
+    }));
+    await fs.writeFile('data/locations.json', '{}');
+    await fs.writeFile('data/rects.json', '[]');
+
+    for (const [stage, requestPath] of [
+      ['prod', '/prod/get-rects'],
+      ['prod', '/get-rects'],
+      ['$default', '/get-rects']
+    ]) {
+      const result = await handler({
+        requestContext: { stage, http: { method: 'GET', path: requestPath } },
+        headers: { authorization: credentials('alice', 'secret') }, body: ''
+      }, {});
+      assert.equal(result.statusCode, 200, requestPath);
+      assert.deepEqual(JSON.parse(result.body), []);
+      assert.equal(result.headers['Access-Control-Allow-Origin'], '*');
+    }
+    const unauthorized = await handler({
+      requestContext: { stage: 'prod', http: { method: 'GET', path: '/prod/get-rects' } },
+      headers: {}, body: ''
+    }, {});
+
+    assert.equal(unauthorized.statusCode, 401);
+  } finally {
+    process.chdir(originalCwd);
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
 });
 
 test('OwnTracksServer handles HTTP requests and errors', async () => {

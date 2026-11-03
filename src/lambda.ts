@@ -23,10 +23,14 @@ export const handler = async (
     await storage.initialize();
 
     const req = event.requestContext.http;
+    const stagePrefix = `/${event.requestContext.stage}/`;
+    const requestPath = req.path.startsWith(stagePrefix)
+      ? req.path.slice(stagePrefix.length - 1)
+      : req.path;
 
     const resp = await common.handleRequest(storage, {
       method: req.method,
-      path: req.path.slice(event.requestContext.stage.length + 1),
+      path: requestPath,
       authHeader: event.headers?.authorization,
       bodyString: event.body || ''
     });
