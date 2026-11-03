@@ -1,15 +1,209 @@
 # OwnTracks Server
 
-You'll need to set GOOGLE_API_KEY (could put it in env.sh)
+## Architecture
+
+```text
++------------------+        HTTPS API         +----------------------+
+| OwnTracks phones | -> POST /pub ----------> |                      |
++------------------+                          | API Gateway          |
+                                              |        |             |
++------------------+ -> GET /hand-angles ---> |        v             |
+| Raspberry Pi Pico|                          | AWS Lambda           |
+| + stepper motors |                          | request + label logic|
++------------------+                          |        |             |
+                                              +--------+-------------+
++------------------+ -> GET /get-rects        |        |
+| Browser          | -> POST /update-rects -> |        | AWS SDK
+| map/editor       |                          |        v
++------------------+                          |  +-------------+
+                                              |  | DynamoDB    |
+                                              |  | users       |
+                                              |  | locations   |
+                                              |  +-------------+
+                                              |
+                                              | Local development:
+                                              | data/*.json
+                                              +----------------------
+
+Lambda derives:
+  locations + saved rectangles + CLOCK_CONFIG
+                    -> labels
+                    -> hand angles
+```
+
+The storage target depends on the deployment mode:
+
+- AWS deployment: DynamoDB
+- Local server: JSON files under `data/`
+
+In DynamoDB, rectangles are stored as a system record in the locations table.
+On the Pico, fetched hand angles are converted into stepper positions.
+
+Rectangle reads and writes use `GET /get-rects` and `POST /update-rects`.
+
+## Google Maps API key
+
+1. Create Google Cloud Project
+   - Go to Google Cloud Console (https://console.cloud.google.com/)
+   - Create a new project or select existing one
+2. Enable Billing
+   - Google Maps Platform requires billing enabled
+   - See [current pricing and free usage allowances](https://developers.google.com/maps/billing-and-pricing/pricing)
+3. Enable Required APIs
+   - Go to APIs & Services > Library (https://console.cloud.google.com/apis/library)
+   - Search and enable:
+     - Maps JavaScript API
+4. Create API Key
+   - Go to APIs & Services > Credentials (https://console.cloud.google.com/apis/credentials)
+   - Click "Create Credentials" > "API Key"
+   - Copy the generated key
+5. Restrict API Key (Recommended)
+   - Edit the API key
+   - Under "Application restrictions", select "HTTP referrers"
+   - Add your domain (e.g., localhost:* for local testing)
+   - Under "API restrictions", select "Restrict key"
+   - Choose "Maps JavaScript API"
+
 
 ## Local test
 
+Use Node.js 22 or later, npm, and `jq`. Copy `example-env.sh` to `env.sh`,
+then edit its API key and `CLOCK_CONFIG` for your map and clock:
+
 ```bash
+cp example-env.sh env.sh
+# Edit env.sh before continuing.
+source ./env.sh
 npm install
+mkdir -p data
+```
+
+Before the first start, create `data/users.json` with a local test user
+(preserve any existing users):
+
+```json
+{
+  "testuser": { "friend_group": "friends", "hashed_password": "tbd" }
+}
+```
+
+The first authenticated request sets that user's password. The curl examples
+below use `testuser:hello`; use the same credentials in your browser. Include
+`testuser` in `CLOCK_CONFIG.handFriend` to see its hand angle in local tests.
+The server creates the remaining data files as needed.
+
+```bash
 PORT=8888 npm start
 ```
 
-### Using curl with basic auth
+## Setting Up Labeled Rectangles
+
+### What rectangles do
+
+Saved rectangles define named places such as `home`, `work`, or `school`.
+
+When a posted location falls inside one of those rectangles, the rectangle name becomes that user's label. The server then uses `CLOCK_CONFIG.labelAngle` to turn that label into a hand angle.
+
+Current label behavior in the server:
+
+- if a user is moving faster than about `6 km/h`, the label becomes `moving`
+- if no rectangle matches, the label becomes `unknown`
+- if a configured hand's username has no location entry, the angle falls back to the `error` label
+- for `/hand-angles`, if multiple rectangles overlap, the smallest matching rectangle wins
+- the legacy `/friend-labels` endpoint instead uses the first matching rectangle in saved order
+
+### Prerequisites
+
+You need both of these configured before the rectangle editor is useful:
+
+1. `GOOGLE_API_KEY`
+2. `CLOCK_CONFIG`
+
+`GOOGLE_API_KEY` is used only by the browser-based map editor.
+
+`CLOCK_CONFIG` must define:
+
+- `handFriend`: which usernames map to the physical hands
+- `labelAngle`: which angle each label name should point to
+
+The rectangle names you create must exactly match keys in `CLOCK_CONFIG.labelAngle`.
+
+At a minimum, `labelAngle` should usually include:
+
+- `unknown`
+- `moving`
+- `error`
+
+Example:
+
+```bash
+export CLOCK_CONFIG=$(jq -cn '
+  {handFriend:["aa","bb","cc"],
+   labelAngle:{home:0, work:90, school:180, church:225,
+               unknown:270, moving:315, error:345}}
+')
+```
+
+In that example, a rectangle named `church` is valid because `labelAngle.church` exists. A rectangle named `gym` would not work until `gym` is also added to `labelAngle`.
+
+### Open the rectangle editor
+
+1. Start the server.
+2. Open the site in your browser.
+3. Click `Edit rectangles`.
+
+The editor page loads Google Maps using `GOOGLE_API_KEY`, then loads any previously saved rectangles from `GET /get-rects`.
+
+### Create a rectangle
+
+1. Click `Draw Rectangle`.
+2. Drag a box over the area you want to label.
+3. When prompted, enter the rectangle name, such as `home`.
+4. Click `Save Rectangles`.
+
+That writes the full rectangle list to `POST /update-rects`.
+
+### Read existing rectangles
+
+1. Open `Edit rectangles`.
+2. Wait for the map to load.
+3. Existing saved rectangles should appear automatically.
+
+This is the easiest way to inspect the current saved set.
+
+### Update a rectangle
+
+To move or resize a rectangle:
+
+1. Drag it to a new location, or drag its resize handles.
+2. Click `Save Rectangles`.
+
+To rename a rectangle:
+
+1. Double-click the rectangle.
+2. Enter the new name.
+3. Click `Save Rectangles`.
+
+Remember that the new name must still exist in `CLOCK_CONFIG.labelAngle`.
+
+### Delete a rectangle
+
+1. Double-click the rectangle.
+2. Clear the name or submit an empty name.
+3. Click `Save Rectangles`.
+
+The rectangle is removed from the saved set.
+
+### Save and verify
+
+After creating or editing rectangles:
+
+1. Reopen `Edit rectangles` and confirm the saved rectangles reload.
+2. Post a test location to `/pub` for one of your configured users.
+3. Check `/hand-angles` and confirm the expected angles are returned in hand order.
+4. Optionally check `/friend-labels`; overlapping rectangles can produce a different label as described above.
+
+Example test location post:
 
 ```bash
 curl -v -u testuser:hello \
@@ -17,6 +211,10 @@ curl -v -u testuser:hello \
   -d '{"_type":"location","lat":40.7128,"lon":-74.0060}' \
   http://localhost:8888/pub
 ```
+
+If `home` is the smallest rectangle containing this location and the user is
+configured in `handFriend`, `/hand-angles` should return the angle configured
+for `home` at that user's position in the list.
 
 ## Interacting with Dynamo
 
@@ -46,18 +244,31 @@ AWS_REGION=us-east-2 AWS_PROFILE=default DYNAMO_MODE=true PORT=8888 npm start
 ### Prerequisites
 - AWS CLI configured
 - AWS S3 bucket for Lambda deployment
+- Node.js 22 or later, npm, `jq`, and `zip`
+- Export `S3BUCKET`, `GOOGLE_API_KEY`, `DOMAIN_WILDCARD`, `DOMAIN_NAME`, and
+  `CLOCK_CONFIG` using your customized `env.sh`
 
 ### Deployment Steps
 
 ```bash
-S3BUCKET=your-bucket-name ./deploy.sh
+source ./env.sh
+./deploy.sh
 ```
+
+On first deployment, CloudFormation waits for the ACM certificate to be
+validated. Open AWS Certificate Manager in the deployment region, find the
+pending certificate for `DOMAIN_WILDCARD`, and add its DNS validation CNAME
+to your domain's DNS records. Deployment continues after validation succeeds.
+
+Once deployment finishes, create a DNS CNAME for `DOMAIN_NAME` pointing to the
+`CustomDomainTarget` stack output. `OwnTracksApiEndpoint` is the direct API
+Gateway URL, including its `/prod/` stage prefix.
 
 ## Physical locograph
 
 ### Parts list
 
-Most of these parts can be substituded with a similar alternative. Amazon links are only provided for convenience, not as strong recommendations.
+Most of these parts can be substituted with a similar alternative. Amazon links are only provided for convenience, not as strong recommendations.
 
 1. one [raspberry pi pico 2 w -- with headers](https://www.adafruit.com/product/6315) ($8) 
 2. one [usb port](https://www.amazon.com/dp/B07X86YFFN) for power ($6)
