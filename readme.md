@@ -96,6 +96,14 @@ The server creates the remaining data files as needed.
 PORT=8888 npm start
 ```
 
+## Unit tests
+
+Run the TypeScript unit tests with:
+
+```bash
+npm test
+```
+
 ## Setting Up Labeled Rectangles
 
 ### What rectangles do
