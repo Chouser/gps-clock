@@ -94,6 +94,7 @@ test('handleRequest routes location and rectangle endpoints', async () => {
   });
 
   assert.equal(posted.status, 200);
+  assert.deepEqual(JSON.parse(posted.bodyString), []);
   assert.equal(saved.status, 200);
   assert.deepEqual(JSON.parse(loaded.bodyString), [{ name: 'home' }]);
   assert.deepEqual(calls, [
