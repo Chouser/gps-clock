@@ -104,6 +104,12 @@ Run the TypeScript unit tests with:
 npm test
 ```
 
+Run the Pico code unit tests with Python's standard library test runner:
+
+```bash
+python3 -m unittest discover -s pico-code -p 'test_*.py'
+```
+
 ## Setting Up Labeled Rectangles
 
 ### What rectangles do

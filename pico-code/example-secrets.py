@@ -3,6 +3,9 @@ import urequests
 WIFI_SSID = "Comcast123"
 WIFI_PASSWORD = "123456"
 
+# Used when the API returns null for a hand angle.
+FALLBACK_ANGLE_DEG = 90.0
+
 def fetch_angles():
     return urequests.get("https://myhosting.site/hand-angles",
                          auth=("username", "password"),
@@ -15,5 +18,3 @@ steppers = [['aa', [10, 11, 12, 13]],
             ['cc', [18, 19, 20, 21]],
             ['dd', [28, 27, 26, 22]],
             ['ee', [2, 3, 4, 5]]]
-
-
