@@ -37,7 +37,12 @@ export class LocalFileStorage implements StorageInterface {
   }
 
   async getRects() {
-    return JSON.parse(await fs.readFile(rectsFilePath, 'utf8'));
+    try {
+      return JSON.parse(await fs.readFile(rectsFilePath, 'utf8'));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
   }
 
   async getUserCredentials(username: string): Promise<UserCredentials | null> {

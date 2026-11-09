@@ -48,8 +48,8 @@ export class OwnTracksServer {
       }
     });
 
-    server.listen(this.port, () => {
-      console.log(`Server running on port ${this.port} in ${this.isDynamoMode ? 'DynamoDB' : 'Local File'} mode`);
-    });
+    await new Promise<void>(resolve => server.listen(this.port, resolve));
+    console.log(`Server running on port ${this.port} in ${this.isDynamoMode ? 'DynamoDB' : 'Local File'} mode`);
+    return server;
   }
 }

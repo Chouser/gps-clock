@@ -12,7 +12,7 @@ import secrets
 
 def connect_wifi(ssid, password):
     """Connects the Pico W to the specified WiFi network."""
-    print("Connecting to WiFi...", end="")
+    print(f"Connecting to {ssid} WiFi...", end="")
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(ssid, password)
@@ -80,6 +80,15 @@ class Stepper:
             self.timer.init(mode=Timer.ONE_SHOT, period=delay_ms, callback=self._update)
 
     def set_target_angle(self, angle, delay=0.0):
+        if angle is None:
+            print(f"{self.name} invalid angle: None")
+            return
+        try:
+            angle = float(angle)
+        except (TypeError, ValueError):
+            print(f"{self.name} invalid angle: {angle!r}")
+            return
+
         self.target_step = int(angle * self.steps_per_revolution / 360) % self.steps_per_revolution
         print(f"{self.name} set target angle {angle}, step {self.target_step}")
         self.speed_sps = 1000 * shortest_direction(self.steps_per_revolution, self.step, self.target_step)
@@ -113,47 +122,89 @@ class LocationFetcher:
 
     def _update(self, _timer=None):
         self.led.value(1)
+        angles = None
         try:
-            angles = ujson.loads(secrets.fetch_angles().text)
+            response = secrets.fetch_angles()
+            try:
+                angles = ujson.loads(response.text)
+            finally:
+                response.close()
             if self.demo_mode:
                 if random.random() < 0.5:
-                    angles = [int(random.random() * 360) for _ in steppers]
+                    angles = [int(random.random() * 360) for _ in self.steppers]
                 else:
-                    angles = [0, 0, 0, 0, 0]
+                    angles = [0 for _ in self.steppers]
             print("Fetched:", angles)
+        except Exception as exc:
+            print("Fetch failed:", exc)
+            return
         finally:
             self.led.value(0)
             self.timer.init(mode=Timer.ONE_SHOT, period=30 * 1000, callback=self._update)
-        for angle, stepper, order in zip(angles, self.steppers, range(5)):
-            stepper.set_target_angle(angle, order * 3.0)
 
-LED = Pin(secrets.LED_PIN, Pin.OUT)
+        if not isinstance(angles, (list, tuple)):
+            print("Fetched invalid payload:", angles)
+            return
+
+        n = len(self.steppers)
+        if len(angles) < n:
+            angles = list(angles) + [None] * (n - len(angles))
+        elif len(angles) > n:
+            angles = angles[:n]
+
+        for i, stepper in enumerate(self.steppers):
+            angle = angles[i]
+            if angle is None:
+                angle = secrets.FALLBACK_ANGLE_DEG
+            elif not isinstance(angle, (int, float)):
+                print(f"{stepper.name} invalid fetched angle: {angle!r}")
+                angle = secrets.FALLBACK_ANGLE_DEG
+
+            angle = float(angle) % 360.0
+            stepper.set_target_angle(angle, i * 3.0)
+
 LAST = 0
+LED = None
+TIMER = None
+steppers = []
+
+
 def blink(_):
     global LAST
     LAST = LAST ^ 1
     LED.value(LAST)
 
-TIMER = Timer()
 
-try:
-    button = Pin(secrets.button_pin, Pin.IN, Pin.PULL_UP)
-    steppers = [Stepper(name, pins, button) for (name, pins) in secrets.steppers]
+def main():
+    global LED, TIMER, steppers
 
-    TIMER.init(mode=Timer.PERIODIC, period=100, callback=blink)
-    connect_wifi(secrets.WIFI_SSID, secrets.WIFI_PASSWORD)
-    TIMER.deinit()
+    LED = Pin(secrets.LED_PIN, Pin.OUT)
+    TIMER = Timer()
+    steppers = []
 
-    for s in steppers:
-        s.calibrate(button)
-        time.sleep(0.5)
+    try:
+        button = Pin(secrets.button_pin, Pin.IN, Pin.PULL_UP)
+        steppers = [Stepper(name, pins, button) for (name, pins) in secrets.steppers]
 
-    fetcher = LocationFetcher(LED, steppers, demo_mode=False)
+        TIMER.init(mode=Timer.PERIODIC, period=100, callback=blink)
+        connect_wifi(secrets.WIFI_SSID, secrets.WIFI_PASSWORD)
+        TIMER.deinit()
 
-    # it is important to keep all the Steppers and fetcher in scope to prevent GC
-    while True:
-        time.sleep(60)
-finally:
-    [s.stop for s in steppers]
-    TIMER.deinit()
-    LED.value(0)
+        for s in steppers:
+            s.calibrate(button)
+            time.sleep(0.5)
+
+        fetcher = LocationFetcher(LED, steppers, demo_mode=False)
+
+        # it is important to keep all the Steppers and fetcher in scope to prevent GC
+        while True:
+            time.sleep(60)
+    finally:
+        for s in steppers:
+            s.stop()
+        TIMER.deinit()
+        LED.value(0)
+
+
+if __name__ == "__main__":
+    main()

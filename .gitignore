@@ -5,3 +5,5 @@
 /pico-code/secrets.py
 /notes.txt
 /parameters.json
+**__pycache__**
+/rectangles-*.json

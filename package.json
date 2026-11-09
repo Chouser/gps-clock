@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "test": "npm run build && node --test test/*.test.js",
+    "backup:rectangles": "node tools/backup-rectangles.js",
     "dynamo-ops": "ts-node src/dynamo-ops.ts",
     "build": "tsc && mkdir -p dist/static && cp -r static/* dist/static/",
     "build:lambda": "tsc && mkdir -p dist/static && cp -r static/* dist/static/ && cd dist && zip -r ../lambda.zip ."
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.485.0",
-    "@aws-sdk/lib-dynamodb": "^3.485.0"
+    "@aws-sdk/client-dynamodb": "^3.972.0",
+    "@aws-sdk/lib-dynamodb": "^3.972.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.126",

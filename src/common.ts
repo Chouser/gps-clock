@@ -117,16 +117,9 @@ export async function handleRequest(storage: StorageInterface, req: Request): Pr
       await storage.saveUserLocation(username, userCredentials.friend_group, body);
     }
 
-    const userLocs = await storage.getUserLocationsInGroup(userCredentials.friend_group);
-
     return jsonResponse({
       status: 200,
-      body: userLocs
-        .filter(entry => entry.username != username)
-        .map(entry => ({
-          ...entry.location,
-          tid: entry.username
-        }))
+      body: []
     })
   }
 

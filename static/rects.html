@@ -40,16 +40,29 @@
 <body>
     <div id="map"></div>
     <div id="controls">
-        <button id="drawRectBtn">Draw Rectangle</button>
-        <button id="saveRectanglesBtn">Save Rectangles</button>
+        <button id="drawRectBtn" disabled>Draw Rectangle</button>
+        <button id="saveRectanglesBtn" disabled>Save Rectangles</button>
+        <span id="status" role="status">Loading map…</span>
     </div>
 
     <script>
     (function() {
         let map;
         let rectangles = [];
-        let drawingManager;
+        let drawing = false;
+        let drawingStart = null;
         let currentDrawing = null;
+        let loaded = false;
+        let saving = false;
+        const drawButton = document.getElementById('drawRectBtn');
+        const saveButton = document.getElementById('saveRectanglesBtn');
+        const status = document.getElementById('status');
+
+        function updateButtons() {
+            drawButton.disabled = !loaded || saving;
+            saveButton.disabled = !loaded || saving || drawing;
+            drawButton.textContent = drawing ? 'Cancel Drawing' : 'Draw Rectangle';
+        }
 
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
@@ -57,66 +70,123 @@
                 zoom: 11
             });
 
-            // Initialize Drawing Manager
-            drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: null,
-                drawingControl: false,
-                rectangleOptions: {
-                    editable: true,
-                    draggable: true
+            drawButton.addEventListener('click', startDrawingRect);
+            saveButton.addEventListener('click', saveRectangles);
+            map.addListener('mousedown', event => {
+                if (!drawing || !event.latLng) return;
+                drawingStart = event.latLng;
+                currentDrawing = new google.maps.Rectangle({
+                    map, clickable: false,
+                    bounds: new google.maps.LatLngBounds(drawingStart, drawingStart)
+                });
+            });
+            map.addListener('mousemove', event => {
+                if (currentDrawing && event.latLng) {
+                    currentDrawing.setBounds(new google.maps.LatLngBounds(drawingStart, drawingStart).extend(event.latLng));
                 }
             });
-            drawingManager.setMap(map);
-
-            // Fetch initial rectangles
-            fetchRectangles();
-
-            // Event Listeners
-            document.getElementById('drawRectBtn').addEventListener('click', startDrawingRect);
-            document.getElementById('saveRectanglesBtn').addEventListener('click', saveRectangles);
-
-            // Drawing complete event
-            google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rectangle) {
-                drawingManager.setDrawingMode(null);
+            map.addListener('mouseup', event => {
+                if (!currentDrawing || !event.latLng) return;
+                const pointer = event.domEvent;
+                if (pointer && !document.getElementById('map').contains(
+                    document.elementFromPoint(pointer.clientX, pointer.clientY))) {
+                    cancelDrawing();
+                    return;
+                }
+                const rectangle = currentDrawing;
+                rectangle.setBounds(new google.maps.LatLngBounds(drawingStart, drawingStart).extend(event.latLng));
+                const bounds = rectangle.getBounds();
+                if (bounds.getNorthEast().lat() === bounds.getSouthWest().lat()
+                    || bounds.getNorthEast().lng() === bounds.getSouthWest().lng()) {
+                    cancelDrawing();
+                    return;
+                }
+                currentDrawing = null;
+                cancelDrawing();
+                rectangle.setOptions({ clickable: true, editable: true, draggable: true });
                 finishCreatingRect(rectangle);
                 editRectName(rectangle);
-                currentDrawing = null;
             });
+            // Let the map's mouseup finish first; otherwise discard an outside release.
+            document.addEventListener('mouseup', () => setTimeout(() => {
+                if (currentDrawing) cancelDrawing();
+            }, 0));
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && drawing) cancelDrawing();
+            });
+            window.addEventListener('blur', () => {
+                if (drawing) cancelDrawing();
+            });
+            fetchRectangles();
         }
 
-        function fetchRectangles() {
-            fetch('get-rects')
-                .then(response => {
-                    if (!response.ok) {
-                        return [];
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    data.forEach(rectData => {
-                        const rectangle = new google.maps.Rectangle({
-                            bounds: {
-                                north: rectData.north,
-                                south: rectData.south,
-                                east: rectData.east,
-                                west: rectData.west
-                            },
-                            editable: true,
-                            draggable: true,
-                            map: map
-                        });
-
-                        rectangle.name = rectData.name;
-                        finishCreatingRect(rectangle);
+        async function fetchRectangles() {
+            status.textContent = 'Loading rectangles…';
+            try {
+                const response = await fetch('get-rects');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!Array.isArray(data) || !data.every(rect => rect
+                    && typeof rect.name === 'string'
+                    && ['north', 'south', 'east', 'west'].every(key => Number.isFinite(rect[key]))
+                    && rect.north > rect.south && rect.east > rect.west
+                    && rect.north <= 90 && rect.south >= -90
+                    && rect.east <= 180 && rect.west >= -180)) {
+                    throw new Error('Invalid rectangle list');
+                }
+                const allBounds = new google.maps.LatLngBounds();
+                data.forEach(rectData => {
+                    const rectangle = new google.maps.Rectangle({
+                        bounds: {
+                            north: rectData.north,
+                            south: rectData.south,
+                            east: rectData.east,
+                            west: rectData.west
+                        },
+                        editable: true,
+                        draggable: true,
+                        map: map
                     });
+
+                    rectangle.name = rectData.name;
+                    finishCreatingRect(rectangle);
+                    allBounds.union(rectangle.getBounds());
                 });
+                if (data.length) map.fitBounds(allBounds);
+                loaded = true;
+                status.textContent = `Loaded ${data.length} rectangles.`;
+            } catch (error) {
+                status.textContent = `Failed to load rectangles: ${error.message}. Reload to retry.`;
+            }
+            updateButtons();
         }
 
         function startDrawingRect() {
-            if (currentDrawing) {
-                currentDrawing.setMap(null);
-            }
-            drawingManager.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+            if (!loaded || saving) return;
+            if (drawing) return cancelDrawing();
+            drawing = true;
+            rectangles.forEach(rect => rect.setOptions({ clickable: false, editable: false, draggable: false }));
+            map.setOptions({ draggable: false, draggableCursor: 'crosshair' });
+            status.textContent = 'Drag a rectangle on the map. Escape cancels.';
+            updateButtons();
+        }
+
+        function cancelDrawing() {
+            if (currentDrawing) currentDrawing.setMap(null);
+            currentDrawing = null;
+            drawingStart = null;
+            drawing = false;
+            rectangles.forEach(rect => rect.setOptions({ clickable: true, editable: true, draggable: true }));
+            map.setOptions({ draggable: true, draggableCursor: null });
+            status.textContent = 'Ready. Save Rectangles to persist changes.';
+            updateButtons();
+        }
+
+        function labelContent(name) {
+            const label = document.createElement('div');
+            label.className = 'rectangle-label';
+            label.textContent = name || '';
+            return label;
         }
 
         function editRectName(rectangle) {
@@ -132,7 +202,7 @@
             } else {
                 // Update name
                 rectangle.name = newName;
-                rectangle.label.setContent(`<div class="rectangle-label">${newName}</div>`);
+                rectangle.label.setContent(labelContent(newName));
                 rectangle.label.open(map);
             }
         }
@@ -142,7 +212,7 @@
 
             // Add name label to rectangle
             rectangle.label = new google.maps.InfoWindow({
-                content: `<div class="rectangle-label">${rectangle.name}</div>`,
+                content: labelContent(rectangle.name),
                 position: rectangle.getBounds().getCenter(),
                 disableAutoPan: true
             });
@@ -155,16 +225,19 @@
             // Double-click event to edit name
             rectangle.addListener('dblclick', (event) => {
                 editRectName(rectangle);
-                event.domEvent.preventDefault();
+                event.domEvent?.preventDefault();
             });
 
             // Update label position when rectangle moves
             rectangle.addListener('bounds_changed', () => {
-                label.setPosition(rectangle.getBounds().getCenter());
+                rectangle.label.setPosition(rectangle.getBounds().getCenter());
             });
         }
 
         function saveRectangles() {
+            if (!loaded || drawing || saving) return;
+            saving = true;
+            updateButtons();
             const rectangleData = rectangles.map(rect => {
                 const bounds = rect.getBounds();
                 return {
@@ -192,10 +265,11 @@
             })
             .catch(() => {
                 alert('Error saving rectangles.');
+            })
+            .finally(() => {
+                saving = false;
+                updateButtons();
             });
-        }
-
-        function renderRectangles() {
         }
 
         // Load Google Maps and initialize
@@ -203,9 +277,14 @@
             const cookies = document.cookie.split('; ');
             const cookie = cookies.find(row => row.startsWith('googleApiKey='));
             const googleApiKey = cookie ? cookie.split('=')[1] : null;
+            if (!googleApiKey || googleApiKey === 'undefined') {
+                status.textContent = 'Google Maps API key is missing. Check GOOGLE_API_KEY on the server.';
+                return;
+            }
 
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${googleApiKey}&libraries=drawing&callback=window.initMap`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleApiKey)}&callback=initMap`;
+            script.onerror = () => { status.textContent = 'Failed to load Google Maps. Reload to retry.'; };
             script.async = true;
             script.defer = true;
             document.body.appendChild(script);
@@ -213,6 +292,7 @@
 
         // Expose initMap globally
         window.initMap = initMap;
+        window.gm_authFailure = () => { status.textContent = 'Google Maps authentication failed. Check the API key configuration.'; };
         loadScript();
     })();
     </script>
